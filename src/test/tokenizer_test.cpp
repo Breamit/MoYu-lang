@@ -77,7 +77,6 @@ static String tokenTypeName(TokenType type) {
         case TokenType::ES_EXPORT:         return "EXPORT";
         case TokenType::ES_AS:             return "AS";
         case TokenType::ES_AWAIT:          return "AWAIT";
-        case TokenType::ES_ASYNC:          return "ASYNC";
         case TokenType::ES_IDENT:          return "IDENTIFIER";
         case TokenType::ES_PLUS:           return "PLUS";
         case TokenType::ES_MINUS:          return "MINUS";

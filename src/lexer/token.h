@@ -25,6 +25,7 @@ enum class TokenType {
     ES_LIST,            //list
     ES_BOOL,            //bool
     ES_ANY,             //any
+    ES_LAMBDA,          //lambda 闭包类型标注
     ES_FOR,             //for
     ES_IN,              //in
     ES_WHILE,           //while
@@ -51,7 +52,6 @@ enum class TokenType {
     ES_EXPORT,          //export
     ES_AS,              //as
     ES_AWAIT,           //await
-    ES_ASYNC,           //async
     ES_IDENT,           //标识符
     ES_PLUS,            // +
     ES_MINUS,           // -

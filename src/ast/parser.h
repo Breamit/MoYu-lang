@@ -6,6 +6,7 @@
 #include <src/type.h>
 #include <src/lexer/lexer.h>
 #include <functional>
+#include <src/error/errorinfo.hpp>
 
 
 
@@ -98,6 +99,15 @@ public:
     // 解析类型标注字面量
     UPtr<TypeLiteral> parseTypeLiteral();
 
+    // 解析表达式列表
+    UPtr<Array<UPtr<Expression>>> parseListExpression(TokenType endToken);
+
+    // 解析数组字面量
+    UPtr<ArrayLiteral> parseArrayLiteral();
+
+    // 解析哈希表字面量
+    UPtr<MapLiteral> parseMapLiteral();
+
     // 解析前缀表达式
     UPtr<Expression> parsePrefixExpression();
     
@@ -159,7 +169,22 @@ public:
     UPtr<ExportStatement> parseExportStatement();
 
     // 解析注解语句
-    UPtr<AnnotationStatement> parseAnnotation();
+    UPtr<AnnotationStatement> parseAnnotationStatement();
+
+    // 解析 await 语句
+    UPtr<AwaitExpression> parseAwaitExpression();
+
+    // 解析函数调用参数
+    UPtr<Array<UPtr<Expression>>> parseCallArguments();
+
+    // 解析函数调用
+    UPtr<CallExpression> parseCallExpression(UPtr<Expression> func);
+
+    // 解析索引访问
+    UPtr<IndexExpression> parseIndexExpression(UPtr<Expression> left);
+
+    // 解析成员访问表达式
+    UPtr<MemberAccessExpression> parseMemberAccessExpression(UPtr<Expression> left);
 
     // 前缀处理函数
     PrefixFn prefixParseFn(TokenType type);

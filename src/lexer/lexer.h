@@ -4,6 +4,7 @@
 #include <cctype>
 #include <src/type.h>
 #include "token.h"
+#include <src/error/errorinfo.hpp>
 
 
 

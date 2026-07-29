@@ -138,7 +138,7 @@ UPtr<Statement> Parser::parseStatement() {
             return parseExportStatement();
         case TokenType::ES_AT:
             // 解析注解
-            return parseAnnotation();
+            return parseAnnotationStatement();
         default:
             return parseExpressionStatement();
     }
@@ -170,6 +170,9 @@ UPtr<ExpressionStatement> Parser::parseExpressionStatement() {
     stmt->token = curToken_;
     stmt->expression = parseExpression(Precedence::LOWEST);
     if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("expression need end with \' ; \' ",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
@@ -227,11 +230,8 @@ UPtr<Expression> Parser::parseNullLiteral() {
 UPtr<TypeLiteral> Parser::parseTypeLiteral() {
     // 当前curToken必须是合法的类型token
     if(!curToken_.isTypeToken()) {
-        ErrorInfo ei;
-        ei.msg = "期望一个类型名，但遇到 '" + curToken_.getLiteral() + "'";
-        auto pos = curToken_.getPosition();
-        ei.col = pos.first;
-        ei.line = pos.second;
+        ErrorInfo ei(curToken_);
+        ei.setMsg("type annotation is not valid ",ErrorType::ASTBUILD);
         errors_.push_back(ei);
         return nullptr;
     }
@@ -250,6 +250,9 @@ UPtr<TypeLiteral> Parser::parseTypeLiteral() {
                 typel->typeParams.push_back(std::move(param));
             } else {
                 // 参数解析失败
+                ErrorInfo ei(curToken_);
+                ei.setMsg(" fatal parser type annotation ",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
                 return nullptr;
             }
             if (curToken_.getTokenType() == TokenType::ES_COMMA) {
@@ -260,11 +263,8 @@ UPtr<TypeLiteral> Parser::parseTypeLiteral() {
         }
         // 现在应该是 >
         if (curToken_.getTokenType() != TokenType::ES_GT) {
-            ErrorInfo ei;
-            ei.msg = "类型参数缺少关闭的 >";
-            auto pos = curToken_.getPosition();
-            ei.col = pos.first;
-            ei.line = pos.second;
+            ErrorInfo ei(curToken_);
+            ei.setMsg(" type annotation need end with > ",ErrorType::ASTBUILD);
             errors_.push_back(ei);
             return nullptr;
         }
@@ -274,7 +274,120 @@ UPtr<TypeLiteral> Parser::parseTypeLiteral() {
     return typel;
 }
 
-UPtr<Expression> Parser::parsePrefixExpression() {
+UPtr<Array<UPtr<Expression>>> Parser::parseListExpression(TokenType endToken) {
+    auto list = std::make_unique<Array<UPtr<Expression>>>();
+    if(curTokenIs(endToken)) {
+        return list;    // 空列表
+    }
+    while(true) {
+        // 现在应该是expression
+        auto expr = parseExpression(Precedence::LOWEST);
+        if(!expr) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser list expression",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
+        }
+        list->push_back(std::move(expr));
+        if(curTokenIs(endToken)) {
+            // 遇到 ] 说明也该结束了
+            break;
+        }
+        if(!curTokenIs(TokenType::ES_COMMA)) {
+            break;  // 不是 , 说明解析完毕了
+        } else {    
+            nextToken();    //  消耗 ,
+        }
+    }
+    return list;
+}
+
+UPtr<ArrayLiteral> Parser::parseArrayLiteral() {
+    //现在是 [
+    auto arr = std::make_unique<ArrayLiteral>();
+    arr->token = curToken_;
+    nextToken();    //  消耗 [
+    auto list = parseListExpression(TokenType::ES_RBRACK);
+    if(!list) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser array element",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+    arr->elements = std::move(*list);
+    // 现在是 ]
+    if(!curTokenIs(TokenType::ES_RBRACK)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("array need end with ]",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+    nextToken();
+    return arr;
+}
+
+UPtr<MapLiteral> Parser::parseMapLiteral() {
+    // 现在是 {
+    auto hash = std::make_unique<MapLiteral>();
+    hash->token = curToken_;
+    nextToken();
+    if(curTokenIs(TokenType::ES_RBRACE)) {
+        // 空哈希表
+        nextToken();
+        return hash;
+    }
+
+    while(true) {
+        // k : v ,
+        // 现在是第一个字符
+        auto key = parseExpression(Precedence::LOWEST);
+
+        if(!key) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser map key",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
+        }
+        // 现在应该是 :
+        if(!curTokenIs(TokenType::ES_COLON)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("map need : between key and value",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
+        }
+        nextToken();    // 消费 ,
+        auto val = parseExpression(Precedence::LOWEST);
+        if(!val) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser map value",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
+        }
+
+        hash->pairs.push_back({std::move(key),std::move(val)});
+
+        // 现在如果是 , 就继续 loop , 否则就是应该结束了
+        if(curTokenIs(TokenType::ES_COMMA)) {
+            // 消费 ,
+            nextToken();
+            continue;
+        } else {
+            break;
+        }
+    }
+
+    if(!curTokenIs(TokenType::ES_RBRACE)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("map need end with }",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+    nextToken();
+    return hash;
+}
+
+UPtr<Expression> Parser::parsePrefixExpression()
+{
     auto prefix = std::make_unique<PrefixExpression>();
     // 现在指向前缀的标识符
     prefix->token = curToken_;
@@ -304,6 +417,9 @@ UPtr<Expression> Parser::parseGroupedExpression() {
     auto expr = parseExpression(Precedence::LOWEST);
 
     if(!curTokenIs(TokenType::ES_RPAREN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("grouped expression need end with )",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
@@ -340,17 +456,26 @@ UPtr<Array<Pair<UPtr<Expression>, UPtr<TypeLiteral>>>> Parser::parseParamsList()
     while(true) {
         auto name = parseIdentifier();
         if(!name) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser param name",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr; // 解析存在错误
         }
 
         // 当前 token指向 :
         if(!curTokenIs(TokenType::ES_COLON)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("param need : after name",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
 
         nextToken(); // 消耗 :
         auto type = parseTypeLiteral();
         if(!type) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser param type",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
 
@@ -376,12 +501,8 @@ UPtr<LetStatement> Parser::parseLetStatement() {
     auto stmt = std::make_unique<LetStatement>();
     stmt->token = curToken_;    // 保存 let
     if(!expectPeek(TokenType::ES_IDENT)) {
-        ErrorInfo ei;
-        // 未识别到标识符
-        ei.msg = "syntax invalid: identifier not found";
-        auto pos = peekToken_.getPosition();
-        ei.col = pos.first;
-        ei.line = pos.second;
+        ErrorInfo ei(curToken_);
+        ei.setMsg("let need variable name",ErrorType::ASTBUILD);
         errors_.push_back(ei);
         return nullptr;
     }
@@ -392,27 +513,34 @@ UPtr<LetStatement> Parser::parseLetStatement() {
     // name就是ident
     stmt->name = std::move(ident);
 
-    // 下一个token 应该是 : 
+    // 下一个token 应该是 :
     if(!expectPeek(TokenType::ES_COLON)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("let need : type",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
 
-    // 下一个token 应该是类型标注，也就是类型标识
-    // i32 , list<i32> , list<list<i32>>
     // 消耗 :，前进到类型名起始token
     nextToken();
     stmt->varType = parseTypeLiteral();
 
     // 现在的token就是 =
     if(!curTokenIs(TokenType::ES_ASSIGN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("let need = init value",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
-    }    
+    }
     nextToken();    // 消耗掉 =
 
     stmt->value = parseExpression(Precedence::LOWEST);
 
     // 现在指向 ;
     if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("let need end with ;",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         nextToken();
         return nullptr;
     }
@@ -429,12 +557,8 @@ UPtr<ConstStatement> Parser::parseConstStatement() {
     auto stmt = std::make_unique<ConstStatement>();
     stmt->token = curToken_;    // 保存 const
     if(!expectPeek(TokenType::ES_IDENT)) {
-        ErrorInfo ei;
-        // 未识别到标识符
-        ei.msg = "syntax invalid: identifier not found";
-        auto pos = peekToken_.getPosition();
-        ei.col = pos.first;
-        ei.line = pos.second;
+        ErrorInfo ei(curToken_);
+        ei.setMsg("const need variable name",ErrorType::ASTBUILD);
         errors_.push_back(ei);
         return nullptr;
     }
@@ -445,27 +569,34 @@ UPtr<ConstStatement> Parser::parseConstStatement() {
     // name就是ident
     stmt->name = std::move(ident);
 
-    // 下一个token 应该是 : 
+    // 下一个token 应该是 :
     if(!expectPeek(TokenType::ES_COLON)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("const need : type",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
 
-    // 下一个token 应该是类型标注，也就是类型标识
-    // i32 , list<i32> , list<list<i32>>
     // 消耗 :，前进到类型名起始token
     nextToken();
     stmt->varType = parseTypeLiteral();
 
     // 现在的token就是 =
     if(!curTokenIs(TokenType::ES_ASSIGN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("const need = init value",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
-    }    
+    }
     nextToken();    // 消耗掉 =
 
     stmt->value = parseExpression(Precedence::LOWEST);
 
     // 现在指向 ;
     if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("const need end with ;",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         nextToken();
         return nullptr;
     }
@@ -487,11 +618,10 @@ UPtr<ReturnStatement> Parser::parseReturnStatement() {
 
     stmt->value = parseExpression(Precedence::LOWEST);
 
-    if(!stmt) {
-        return nullptr;
-    }
-
     if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("return need end with ;",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
@@ -506,6 +636,9 @@ UPtr<BreakStatement> Parser::parseBreakStatement() {
     stmt->token = curToken_;
     nextToken();
     if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("break need end with ;",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
@@ -519,6 +652,9 @@ UPtr<ContinueStatement> Parser::parseContinueStatement() {
     stmt->token = curToken_;
     nextToken();
     if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("continue need end with ;",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
@@ -533,23 +669,35 @@ UPtr<IfStatement> Parser::parseIfStatement() {
 
     // 现在应该是左括号
     if(!curTokenIs(TokenType::ES_LPAREN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("if need ( condition )",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
 
     auto cond = parseExpression(Precedence::LOWEST);
     if(!cond) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser if condition",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     stmt->condition = std::move(cond);
     // 现在应该是右括号
     if(!curTokenIs(TokenType::ES_RPAREN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("if condition need end with )",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();    //消耗)
-    
+
     auto fs = parseBlockStatement();
     if(!fs) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("if need body block",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     stmt->consequence = std::move(fs);
@@ -562,22 +710,34 @@ UPtr<IfStatement> Parser::parseIfStatement() {
         nextToken();
         // 现在的token是 (
         if(!curTokenIs(TokenType::ES_LPAREN)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("elif need ( condition )",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
         nextToken();
         // 现在的token是expression
         auto expr = parseExpression(Precedence::LOWEST);
         if(!expr) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser elif condition",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
         // 现在的token是 )
         if(!curTokenIs(TokenType::ES_RPAREN)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("elif condition need end with )",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
         nextToken();
         //现在的token是{
         auto bl = parseBlockStatement();
         if(!bl) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("elif need body block",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
         stmt->elifClauses.push_back({std::move(expr),std::move(bl)});
@@ -591,6 +751,9 @@ UPtr<IfStatement> Parser::parseIfStatement() {
 
         auto bl = parseBlockStatement();
         if(!bl) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("else need body block",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
 
@@ -609,23 +772,35 @@ UPtr<SwitchStatement> Parser::parseSwitchStatement() {
 
     // 现在应该是 (
     if(!curTokenIs(TokenType::ES_LPAREN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("switch need ( expr )",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
     auto expr = parseExpression(Precedence::LOWEST);
 
     if(!expr) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser switch condition",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
 
     // 现在应该是 )
     if(!curTokenIs(TokenType::ES_RPAREN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("switch condition need end with )",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
-    
+
     // switch语句的{
     if(!curTokenIs(TokenType::ES_LBRACE)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("switch need body block",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
@@ -638,10 +813,16 @@ UPtr<SwitchStatement> Parser::parseSwitchStatement() {
         //现在是表达式
         auto subExpr = parseExpression(Precedence::LOWEST);
         if(!subExpr) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser case expr",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
 
         if(!curTokenIs(TokenType::ES_COLON)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("case need : after expr",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
 
@@ -653,12 +834,18 @@ UPtr<SwitchStatement> Parser::parseSwitchStatement() {
         } else if(curTokenIs(TokenType::ES_LBRACE)) {
             auto block = parseBlockStatement();
             if(!block) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("case block parse failed",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
                 return nullptr;
             }
             stmt->cases.push_back({std::move(subExpr),std::move(block)});
         } else if(curTokenIs(TokenType::ES_RBRACE)) {
             break;
         } else {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("case body invalid",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
     }
@@ -668,25 +855,37 @@ UPtr<SwitchStatement> Parser::parseSwitchStatement() {
         nextToken();
         //现在应该是 :
         if(!curTokenIs(TokenType::ES_COLON)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("default need :",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
         nextToken();
 
         // 现在应该是 {
         if(!curTokenIs(TokenType::ES_LBRACE)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("default need body block",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
         auto block = parseBlockStatement();
 
         if(!block) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("default body parse failed",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
 
         stmt->defaultCase = std::move(block);
 
-    } 
+    }
 
     if(!curTokenIs(TokenType::ES_RBRACE)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("switch need end with }",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
@@ -707,6 +906,9 @@ UPtr<ForStatement> Parser::parseForStatement() {
 
     // 当前是(
     if(!curTokenIs(TokenType::ES_LPAREN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("for need ( ... )",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
@@ -722,6 +924,9 @@ UPtr<ForStatement> Parser::parseForStatement() {
         nextToken();
 
         if(!curTokenIs(TokenType::ES_IDENT)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("for need var name",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
 
@@ -735,13 +940,28 @@ UPtr<ForStatement> Parser::parseForStatement() {
             // ==================== for-in ====================
             nextToken();    // 跳过 in
             auto iterable = parseExpression(Precedence::LOWEST);
-            if(!iterable) return nullptr;
+            if(!iterable) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("fatal parser for-in iterable",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
+                return nullptr;
+            }
 
-            if(!curTokenIs(TokenType::ES_RPAREN)) return nullptr;
+            if(!curTokenIs(TokenType::ES_RPAREN)) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("for-in need ) after iterable",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
+                return nullptr;
+            }
             nextToken();    // 跳过 )
 
             auto forBody = parseBlockStatement();
-            if(!forBody) return nullptr;
+            if(!forBody) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("for-in need body block",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
+                return nullptr;
+            }
 
             // ---- 翻译 for(let i in iterable){body} 为 C 风格 ----
             // 构造唯一临时变量名
@@ -845,9 +1065,19 @@ UPtr<ForStatement> Parser::parseForStatement() {
             // ==================== C风格 for(let x = expr; ...) ====================
             nextToken();    // 跳过 =
             auto initVal = parseExpression(Precedence::LOWEST);
-            if(!initVal) return nullptr;
+            if(!initVal) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("fatal parser for init value",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
+                return nullptr;
+            }
 
-            if(!curTokenIs(TokenType::ES_SEMICOLON)) return nullptr;
+            if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("for need ; after init",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
+                return nullptr;
+            }
             nextToken();
 
             // 手动构造 init 语句（不强制类型标注）
@@ -867,49 +1097,92 @@ UPtr<ForStatement> Parser::parseForStatement() {
 
             // condition
             stmt->condition = parseExpression(Precedence::LOWEST);
-            if(!curTokenIs(TokenType::ES_SEMICOLON)) return nullptr;
+            if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("for need ; after condition",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
+                return nullptr;
+            }
             nextToken();
 
             // update
             stmt->update = parseExpression(Precedence::LOWEST);
-            if(!curTokenIs(TokenType::ES_RPAREN)) return nullptr;
+            if(!curTokenIs(TokenType::ES_RPAREN)) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("for need ) after update",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
+                return nullptr;
+            }
             nextToken();
 
             stmt->body = parseBlockStatement();
-            if(!stmt->body) return nullptr;
+            if(!stmt->body) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("for need body block",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
+                return nullptr;
+            }
             return stmt;
         } else {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("for init invalid, need = or in",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
     } else {
         // C 风格: for(expr; condition; update) — 无 let/const
         auto initExpr = parseExpression(Precedence::LOWEST);
-        if(!initExpr) return nullptr;
+        if(!initExpr) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser for expr init",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
+        }
 
         auto exprStmt = std::make_unique<ExpressionStatement>();
         exprStmt->token = curToken_;
         exprStmt->expression = std::move(initExpr);
         stmt->init = std::move(exprStmt);
 
-        if(!curTokenIs(TokenType::ES_SEMICOLON)) return nullptr;
+        if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("for need ; after init expr",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
+        }
         nextToken();
 
         // condition
         if(!curTokenIs(TokenType::ES_SEMICOLON)) {
             stmt->condition = parseExpression(Precedence::LOWEST);
-            if(!curTokenIs(TokenType::ES_SEMICOLON)) return nullptr;
+            if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("for need ; after condition",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
+                return nullptr;
+            }
         }
         nextToken();
 
         // update
         if(!curTokenIs(TokenType::ES_RPAREN)) {
             stmt->update = parseExpression(Precedence::LOWEST);
-            if(!curTokenIs(TokenType::ES_RPAREN)) return nullptr;
+            if(!curTokenIs(TokenType::ES_RPAREN)) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("for need ) after update",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
+                return nullptr;
+            }
         }
         nextToken();
 
         stmt->body = parseBlockStatement();
-        if(!stmt->body) return nullptr;
+        if(!stmt->body) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("for need body block",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
+        }
         return stmt;
     }
 
@@ -918,17 +1191,32 @@ UPtr<ForStatement> Parser::parseForStatement() {
     if(!curTokenIs(TokenType::ES_SEMICOLON)) {
         stmt->condition = parseExpression(Precedence::LOWEST);
     }
-    if(!curTokenIs(TokenType::ES_SEMICOLON)) return nullptr;
+    if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("for need ; after condition",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
     nextToken();
 
     if(!curTokenIs(TokenType::ES_RPAREN)) {
         stmt->update = parseExpression(Precedence::LOWEST);
     }
-    if(!curTokenIs(TokenType::ES_RPAREN)) return nullptr;
+    if(!curTokenIs(TokenType::ES_RPAREN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("for need ) after update",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
     nextToken();
 
     stmt->body = parseBlockStatement();
-    if(!stmt->body) return nullptr;
+    if(!stmt->body) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("for need body block",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
     return stmt;
 }
 
@@ -939,28 +1227,43 @@ UPtr<WhileStatement> Parser::parseWhileStatement() {
     nextToken();    // 消费 while
 
     if(!curTokenIs(TokenType::ES_LPAREN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("while need ( condition )",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();    // 消费 (
     auto expr = parseExpression(Precedence::LOWEST);
 
     if(!expr) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser while condition",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
 
     stmt->condition = std::move(expr);
 
     if(!curTokenIs(TokenType::ES_RPAREN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("while condition need end with )",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
 
     nextToken();
 
     if(!curTokenIs(TokenType::ES_LBRACE)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("while need body block",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     auto block = parseBlockStatement();
     if(!block) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("while body parse failed",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
 
@@ -979,6 +1282,9 @@ UPtr<FunctionDeclareStatement> Parser::parseFunctionDeclareStatement() {
     nextToken();
     // 当前是函数名
     if(!curTokenIs(TokenType::ES_IDENT)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fn need function name",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     auto ident = std::make_unique<Identifier>();
@@ -990,32 +1296,45 @@ UPtr<FunctionDeclareStatement> Parser::parseFunctionDeclareStatement() {
 
     // 当前是括号
     if(!curTokenIs(TokenType::ES_LPAREN)) {
-        // 当前不是左括号
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fn need ( params )",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
     auto paramList = parseParamsList();
 
     if(paramList == nullptr) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser fn params",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     fd->params = std::move(*paramList);
 
     // 当前是右括号
     if(!curTokenIs(TokenType::ES_RPAREN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fn params need end with )",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
-    
+
     // 现在是 :
     if(!curTokenIs(TokenType::ES_COLON)) {
-        // 没有类型标注
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fn need : return type",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
 
     auto rt = parseTypeLiteral();
     if(!rt) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser fn return type",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     fd->returnType = std::move(rt);
@@ -1027,12 +1346,18 @@ UPtr<FunctionDeclareStatement> Parser::parseFunctionDeclareStatement() {
         // 解析 block语句
         auto bd = parseBlockStatement();
         if(bd == nullptr) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser fn body",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
         fd->body = std::move(bd);
         return fd;
-        
+
     } else {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fn need ; or { after return type",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
 
@@ -1053,106 +1378,118 @@ UPtr<StructDeclareStatement> Parser::parseStructDeclareStatement() {
 
     // 现在是 标识符
     if(!curTokenIs(TokenType::ES_IDENT)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("struct need name",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
-    auto ident = parseIdentifier();     // 标识符被消费
-
+    auto ident = parseIdentifier();
     if(!ident) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser struct name",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
 
-    decl->name = UPtr<Identifier>(static_cast<Identifier*>(ident.release()));
-    
-    // 当前应该是 {
     if(!curTokenIs(TokenType::ES_LBRACE)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("struct need { fields }",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
-    nextToken(); // 消费 {
-    auto list = parseParamsList();  // 用来解析函数参数列表的也可以用来解析结构体域
+    nextToken();
+    auto list = parseParamsList();
     if(!list) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser struct fields",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     decl->fields = std::move(*list);
-    // 当前的token是}
     if(!curTokenIs(TokenType::ES_RBRACE)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("struct need end with }",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
-
-
-    // 当前应该是 ;
     if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("struct need end with ;",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
-
     return decl;
 }
 
 UPtr<EnumDeclareStatement> Parser::parseEnumDeclareStatement() {
-    // enum Color { white, black, red };
     auto decl = std::make_unique<EnumDeclareStatement>();
-    decl->token = curToken_;    // enum
-    nextToken();                // 跳过 enum
-
+    decl->token = curToken_;
+    nextToken();
     if(!curTokenIs(TokenType::ES_IDENT)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("enum need name",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     auto nameIdent = std::make_unique<Identifier>();
     nameIdent->token = curToken_;
     nameIdent->value = curToken_.getLiteral();
     decl->name = std::move(nameIdent);
-    nextToken();    // 跳过枚举名
-
+    nextToken();
     if(!curTokenIs(TokenType::ES_LBRACE)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("enum need { values }",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
-    nextToken();    // 跳过 {
-
-    // 解析标识符列表
+    nextToken();
     while(curTokenIs(TokenType::ES_IDENT)) {
         auto ident = std::make_unique<Identifier>();
         ident->token = curToken_;
         ident->value = curToken_.getLiteral();
         decl->values.push_back(std::move(ident));
         nextToken();
-
         if(curTokenIs(TokenType::ES_COMMA)) {
-            nextToken();    // 跳过 ,
+            nextToken();
         } else {
             break;
         }
     }
-
     if(!curTokenIs(TokenType::ES_RBRACE)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("enum need end with }",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
-    nextToken();    // 跳过 }
-
+    nextToken();
     if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("enum need end with ;",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
-    nextToken();    // 跳过 ;
-
+    nextToken();
     return decl;
 }
 
 UPtr<ImportStatement> Parser::parseImportStatement() {
-    // 当前 token 是 import
     auto stmt = std::make_unique<ImportStatement>();
     stmt->token = curToken_;
-
-    nextToken();    // 消耗 import
-
+    nextToken();
     if(!curTokenIs(TokenType::ES_IDENT)) {
-        return nullptr; 
+        ErrorInfo ei(curToken_);
+        ei.setMsg("import need module name",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
     }
     auto name = parseIdentifier();
     stmt->name = UPtr<Identifier>(static_cast<Identifier*>(name.release()));
-
-    // 当前token指向 ;
-
     if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("import need end with ;",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
     nextToken();
@@ -1168,20 +1505,19 @@ UPtr<ExportStatement> Parser::parseExportStatement() {
     // 现在的token可以是 标识符 或者是 {
     if(curTokenIs(TokenType::ES_IDENT)) {
         auto ident = parseIdentifier();
-
         stmt->exports.push_back(UPtr<Identifier>(static_cast<Identifier*>(ident.release())));
-        // 现在是 ;
         if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("export need end with ;",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
-        } 
+        }
         nextToken();
         return stmt;
     } else if(curTokenIs(TokenType::ES_LBRACE)) {
         nextToken();
-        // 现在是标识符
         auto idnet1 = parseIdentifier();
         stmt->exports.push_back(UPtr<Identifier>(static_cast<Identifier*>(idnet1.release())));
-        // 现在应该是 , ident
         while(true) {
             if(!curTokenIs(TokenType::ES_COMMA)) {
                 break;
@@ -1192,101 +1528,389 @@ UPtr<ExportStatement> Parser::parseExportStatement() {
             }
             auto ident = parseIdentifier();
             if(!ident) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("fatal parser export ident",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
                 return nullptr;
             }
             stmt->exports.push_back(UPtr<Identifier>(static_cast<Identifier*>(ident.release())));
         }
         if(!curTokenIs(TokenType::ES_RBRACE)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("export need end with }",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
         nextToken();
         if(!curTokenIs(TokenType::ES_SEMICOLON)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("export need end with ;",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
         nextToken();
         return stmt;
-        
-
     } else {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("export need ident or { }",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
         return nullptr;
     }
 }
 
-UPtr<AnnotationStatement> Parser::parseAnnotation() {
-    // 现在是 @
-    Token tk = curToken_;
-    nextToken();
-    if(!curTokenIs(TokenType::ES_IDENT)) {
-        return nullptr;
-    }
-    auto ident = parseIdentifier();
-    UPtr<Annotation> anno = nullptr;
-
-    // 根据ident决定anno的实现类
-    static Map<String,i32> annoMap = {
-        {"native",0},
-        {"platform",1},
-        {"method",2},
-        {"object",3},
-        {"async",4}
+UPtr<AnnotationStatement> Parser::parseAnnotationStatement() {
+    // 当前的token是@
+    // 处理多注解
+    auto stmt = std::make_unique<AnnotationStatement>();
+    // 注解名字 -> id 映射表 ， 用于方便switch 运算
+    static Map<String,i32> annotationMap = {
+        {"native",1},
+        {"platform",2},
+        {"method",3},
+        {"object",4},
+        {"async",5}
     };
+    while(curTokenIs(TokenType::ES_AT)) {
+        // 当前的是 @
+        Token at = curToken_;
+        nextToken();
 
-    auto it = annoMap.find(ident->tokenLiteral());
-    i32 id = -1;
-    if(it != annoMap.end()) {
-        id = it->second;
-        switch(id) {
-            case 0:
-                anno = std::make_unique<NativeAnnotation>();
-                break;
-            case 1:
-                anno =std::make_unique<PlatformAnnotation>();
-                break;
-            case 2:
-                anno = std::make_unique<MethodAnnotation>();
-                break;
-            case 3:
-                anno =std::make_unique<ObjectAnnotation>();
-                break;
-            case 4:
-                anno = std::make_unique<AsyncAnnotation>();
-                break;
-            default:
-                return nullptr;
-        }
-    } else {
-        // 未注册注解
-        return nullptr;
-    }
-
-
-    // 现在是左括号或者fn或者 struct
-    if(curTokenIs(TokenType::ES_LPAREN)) {
-        // 左括号只能是 native / platform / method
-        if(id<0 || id >= 3) {
+        // 现在应该是标识符
+        if(!curTokenIs(TokenType::ES_IDENT)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("annotation need name",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
             return nullptr;
         }
+        auto it = annotationMap.find(curToken_.getLiteral());
+        if(it == annotationMap.end()) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("unknown annotation type",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
+        }
+        auto ident = parseIdentifier();
+        if(!ident) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser annotation name",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
+        }
+        i32 id = it->second;
+
+        // 现在应该是标识符后的token了
         switch(id) {
-            case 0:
-            
+            case 1: {
+                // native 
+                auto anno = std::make_unique<NativeAnnotation>();
+                
+                anno->name = UPtr<Identifier>(static_cast<Identifier*>(ident.release()));
+                anno->token = at;
+
+                if(!curTokenIs(TokenType::ES_LPAREN)) {
+                    ErrorInfo ei(curToken_);
+                    ei.setMsg("native need ( path )",ErrorType::ASTBUILD);
+                    errors_.push_back(ei);
+                    return nullptr;
+                }
+                nextToken();
+                if(!curTokenIs(TokenType::ES_STRING_LITERAL)) {
+                    ErrorInfo ei(curToken_);
+                    ei.setMsg("native need string path",ErrorType::ASTBUILD);
+                    errors_.push_back(ei);
+                    return nullptr;
+                }
+                anno->path = curToken_.getLiteral();
+                nextToken();
+                if(!curTokenIs(TokenType::ES_RPAREN)) {
+                    ErrorInfo ei(curToken_);
+                    ei.setMsg("native need ) after path",ErrorType::ASTBUILD);
+                    errors_.push_back(ei);
+                    return nullptr;
+                }
+                nextToken();
+                stmt->annotations.push_back(std::move(anno));
+            }
+            break;
+            case 2: {
+                auto anno = std::make_unique<PlatformAnnotation>();
+                anno->name = UPtr<Identifier>(static_cast<Identifier*>(ident.release()));
+                anno->token = at;
+                if(!curTokenIs(TokenType::ES_LPAREN)) {
+                    ErrorInfo ei(curToken_);
+                    ei.setMsg("platform need ( list )",ErrorType::ASTBUILD);
+                    errors_.push_back(ei);
+                    return nullptr;
+                }
+                nextToken();
+                if(!curTokenIs(TokenType::ES_IDENT)) {
+                    ErrorInfo ei(curToken_);
+                    ei.setMsg("platform need platform name",ErrorType::ASTBUILD);
+                    errors_.push_back(ei);
+                    return nullptr;
+                }
+                while(true) {
+                    auto identf = parseIdentifier();
+                    anno->platforms.push_back(UPtr<Identifier>(static_cast<Identifier*>(identf.release())));
+                    if(!curTokenIs(TokenType::ES_COMMA)) {
+                        break;
+                    } else {
+                        nextToken();
+                    }
+                }
+                if(!curTokenIs(TokenType::ES_RPAREN)) {
+                    ErrorInfo ei(curToken_);
+                    ei.setMsg("platform need )",ErrorType::ASTBUILD);
+                    errors_.push_back(ei);
+                    return nullptr;
+                }
+                nextToken();
+                stmt->annotations.push_back(std::move(anno));
+            }
+            break;
+            case 3: {
+                auto anno = std::make_unique<MethodAnnotation>();
+                anno->name = UPtr<Identifier>(static_cast<Identifier*>(ident.release()));
+                if(!curTokenIs(TokenType::ES_LPAREN)) {
+                    ErrorInfo ei(curToken_);
+                    ei.setMsg("method need ( Type )",ErrorType::ASTBUILD);
+                    errors_.push_back(ei);
+                    return nullptr;
+                }
+                nextToken();
+                auto typeName = parseIdentifier();
+                if(!typeName) {
+                    ErrorInfo ei(curToken_);
+                    ei.setMsg("fatal parser method type",ErrorType::ASTBUILD);
+                    errors_.push_back(ei);
+                    return nullptr;
+                }
+                anno->token = at;
+                anno->annoType = UPtr<Identifier>(static_cast<Identifier*>(typeName.release()));
+                if(!curTokenIs(TokenType::ES_RPAREN)) {
+                    ErrorInfo ei(curToken_);
+                    ei.setMsg("method need )",ErrorType::ASTBUILD);
+                    errors_.push_back(ei);
+                    return nullptr;
+                }
+                nextToken();
+                stmt->annotations.push_back(std::move(anno));
+            }
+            break;
+            case 4: {
+                auto anno = std::make_unique<ObjectAnnotation>();
+                anno->name = UPtr<Identifier>(static_cast<Identifier*>(ident.release()));
+                anno->token = at;
+                stmt->annotations.push_back(std::move(anno));
+            }
+            break;
+            case 5: {
+                auto anno = std::make_unique<AsyncAnnotation>();
+                anno->name = UPtr<Identifier>(static_cast<Identifier*>(ident.release()));
+                anno->token = at;
+                stmt->annotations.push_back(std::move(anno));
+            }
+            break;
+            default: {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("unknown annotation id",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
+                return nullptr;
+            }
         }
     }
+    // 现在应该是 fn 或者 struct
+
+    if(curTokenIs(TokenType::ES_FUNCTION)) {
+        auto func = parseFunctionDeclareStatement();
+        if(!func) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser annotation fn target",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
+        }
+        stmt->target = std::move(func);
+    } else if(curTokenIs(TokenType::ES_STRUCT)) {
+        auto stru = parseStructDeclareStatement();
+        if(!stru) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser annotation struct target",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
+        }
+        stmt->target = std::move(stru);
+    } else {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("annotation target need fn or struct",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+
+    return stmt;
 }
 
+UPtr<AwaitExpression> Parser::parseAwaitExpression() {
+    auto expr = std::make_unique<AwaitExpression>();
+    expr->token = curToken_;
+
+    nextToken();
+    // 现在是新的表达式
+    if(curTokenIs(TokenType::ES_AWAIT)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("cannot await after await",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+
+    auto args = parseExpression(Precedence::LOWEST);
+    if(!args) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser await argument",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+
+    expr->argument = std::move(args);
+
+    return expr;
+}
+
+UPtr<Array<UPtr<Expression>>> Parser::parseCallArguments() {
+    Array<UPtr<Expression>> args;
+    // 当前的token是第一个参数
+    if(curTokenIs(TokenType::ES_RPAREN)) {
+        return std::make_unique<Array<UPtr<Expression>>>(std::move(args)); // 括号都交给 parseCallExpression 处理
+    }
+    // 解析第一个参数
+    auto first = parseExpression(Precedence::LOWEST);
+    if(!first) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser call arg",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+    args.push_back(std::move(first));
+
+    while(curTokenIs(TokenType::ES_COMMA)) {
+        nextToken();
+        auto ident = parseExpression(Precedence::LOWEST);
+        if(!ident) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("fatal parser call arg after ,",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
+        }
+        args.push_back(std::move(ident));
+    }
+    return std::make_unique<Array<UPtr<Expression>>>(std::move(args));
+    // 现在是)
+}
+
+UPtr<CallExpression> Parser::parseCallExpression(UPtr<Expression> func) {
+    // 现在是 (
+    auto expr = std::make_unique<CallExpression>();
+    expr->token = curToken_;
+    nextToken();
+    
+    
+    auto args = parseCallArguments();
+
+    if(!args) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser call args",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+
+    if(!curTokenIs(TokenType::ES_RPAREN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("call need ) after args",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+    nextToken();
+    expr->arguments = std::move(*args);
+
+    expr->func = std::move(func);
+
+
+    return expr;
+}
+
+UPtr<IndexExpression> Parser::parseIndexExpression(UPtr<Expression> left) {
+    // 现在是 [
+    auto expr = std::make_unique<IndexExpression>();
+    expr->token = curToken_;
+    expr->left = std::move(left);
+
+    nextToken();    // 消耗 [
+    
+    auto index = parseExpression(Precedence::LOWEST);
+    if(!index) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser index expr",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+    expr->index = std::move(index);
+    if(!curTokenIs(TokenType::ES_RBRACK)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("index need ]",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+    nextToken();
+    return expr;
+}
+
+UPtr<MemberAccessExpression> Parser::parseMemberAccessExpression(UPtr<Expression> left) {
+    auto expr = std::make_unique<MemberAccessExpression>();
+    // 现在是 .
+    expr->token = curToken_;
+    expr->object = std::move(left);
+    nextToken();
+
+    // 现在右边是函数名或者成员
+    auto called = parseExpression(Precedence::LOWEST);
+
+    if(!called) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("fatal parser member access",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+
+    expr->called = std::move(called);
+
+    return expr;
+}
 Parser::PrefixFn Parser::prefixParseFn(TokenType type) {
     switch(type) {
         case TokenType::ES_MINUS:
         case TokenType::ES_PLUS:
+        case TokenType::ES_BIT_INVERSION:
             return [this]{return parsePrefixExpression(); };
         case TokenType::ES_IDENT:
             return [this]{return parseIdentifier(); };
         case TokenType::ES_INTEGER:
             return [this]{return parseIntegerLiteral(); };
+        case TokenType::ES_FLOATING:
+            return [this]{return parseFloatingLiteral(); };
+        case TokenType::ES_STRING_LITERAL:
+            return [this]{return parseStringLiteral(); };
+        case TokenType::ES_NULL:
+            return [this]{return parseNullLiteral(); };
         case TokenType::ES_LPAREN:
             return [this]{return parseGroupedExpression(); };
         case TokenType::ES_TRUE:
         case TokenType::ES_FALSE:
             return [this]{return parseBooleanLiteral(); };
+        case TokenType::ES_LBRACK:  // Array
+            return [this]{return parseArrayLiteral(); };
+        case TokenType::ES_LBRACE:  // map
+            return [this]{return parseMapLiteral(); };
+        case  TokenType::ES_AWAIT:
+            return [this]{return parseAwaitExpression(); };
         default:
             return nullptr;
     }
@@ -1310,9 +1934,14 @@ Parser::InfixFn Parser::infixParseFn(TokenType type) {
         case TokenType::ES_EQLT:
         case TokenType::ES_LT:
         case TokenType::ES_GT:
-        case TokenType::ES_BIT_INVERSION:
             return [this](auto left){return parseInfixExpression(std::move(left));};
-        default:
+        case TokenType::ES_LPAREN:  // 函数调用
+            return [this](auto left){return parseCallExpression(std::move(left));} ;
+        case TokenType::ES_LBRACK:  // 索引访问
+            return [this](auto left){return parseIndexExpression(std::move(left));};
+        case TokenType::ES_DOT:
+            return [this](auto left){return parseMemberAccessExpression(std::move(left)); };
+            default:
             return nullptr;
     }
 }

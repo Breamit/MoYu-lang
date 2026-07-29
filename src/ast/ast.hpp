@@ -55,6 +55,7 @@ class BlockStatement;               // 块语句
 class CallExpression;               // 函数调用
 class IndexExpression;              // 索引访问语句
 class AwaitExpression;              // await语句
+class MemberAccessExpression;       // 成员访问语句
 
 // 注解语句
 class AnnotationStatement;          // 注解语句
@@ -106,6 +107,7 @@ enum class NodeType {
     CALL_EXPRESSION,
     INDEX_EXPRESSION,
     AWAIT_EXPRESSION,
+    MEMBER_ACCESS_EXPRESSION,
 
     // 注解
     ANNOTATION_STATEMENT,
@@ -1072,17 +1074,17 @@ public:
 
 // await
 class AwaitExpression : impl Expression {
-  public:
-      Token token;                // await
-      UPtr<Expression> argument;  // 后面的表达式
-      void expressionNode() override {}
-      NodeType type() const {
+public:
+    Token token;                // await
+    UPtr<Expression> argument;  // 后面的表达式
+    void expressionNode() override {}
+    NodeType type() const {
           return NodeType::AWAIT_EXPRESSION;
       }
-      String tokenLiteral() const override {
+    String tokenLiteral() const override {
           return token.getLiteral();
       }
-      String toString() const override {
+    String toString() const override {
           std::ostringstream oss;
           oss << "{\"type\":\"AWAIT_EXPRESSION\"";
           oss << ",\"argument\":";
@@ -1091,9 +1093,34 @@ class AwaitExpression : impl Expression {
           oss << "}";
           return oss.str();
       }
-  };
+};
 
-
+// . 访问表达式
+class MemberAccessExpression : impl Expression {
+public:
+    Token token;                // .
+    UPtr<Expression> object;
+    UPtr<Expression> called;
+    void expressionNode() override {}
+    NodeType type() const {
+          return NodeType::MEMBER_ACCESS_EXPRESSION;
+      }
+    String tokenLiteral() const override {
+          return token.getLiteral();
+      }
+    String toString() const override {
+          std::ostringstream oss;
+          oss << "{\"type\":\"MEMBER_ACCESS_EXPRESSION\"";
+          oss << ",\"object\":";
+          if (object) oss << object->toString();
+          else oss << "null";
+          oss<<",\"called\":";
+          if (called) oss << called->toString();
+          else oss << "null";
+          oss << "}";
+          return oss.str();
+      }
+};
 /**
  * 注解
  */
@@ -1150,7 +1177,7 @@ public:
         oss << ",\"name\":";
         if (name) oss << name->toString();
         else oss << "null";
-        oss << ",\"type\":";
+        oss << ",\"annoType\":";
         if (annoType) oss << annoType->toString();
         else oss << "null";
         oss << "}";

@@ -94,7 +94,6 @@ TokenType Token::lookUpIdent(const Token& tk) {
             {"export", TokenType::ES_EXPORT},
             {"as", TokenType::ES_AS},
             {"await", TokenType::ES_AWAIT},
-            {"async", TokenType::ES_ASYNC},
             {"true", TokenType::ES_TRUE},
             {"false", TokenType::ES_FALSE}
         };

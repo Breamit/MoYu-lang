@@ -178,14 +178,8 @@ Token Lexer::nextToken() {
                 return tk;
             } else {
                 tk.setTL(TokenType::ES_ILEGALL,String(1,this->ch_));
-                // 收集错误信息
-                ErrorInfo ei;
-                std::stringstream ss;
-                ss<<"Lexical Error: unknow token \'" << String(1,this->ch_) <<"\'";
-                ei.msg = ss.str();
-                ei.col = this->col_;
-                ei.line = this->line_;
-                this->errors_.push_back(ei);
+                ErrorInfo ei(tk);
+                ei.setMsg(" unknow token ",ErrorType::LEXER);
                 readChar();     // 跳过非法字符，否则会死循环
                 return tk;
             }

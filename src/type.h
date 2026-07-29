@@ -48,10 +48,5 @@ using SPtr = std::shared_ptr<T>;
 template <typename T>
 using UPtr = std::unique_ptr<T>;
 
-// 错误信息
-struct ErrorInfo {
-    String msg;
-    u32 line;
-    u32 col;
-};
+
 #endif
