@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <stack>
 #include <memory>
 // 基础数据类型
@@ -39,6 +40,9 @@ using Pair = std::pair<K,V>;
 template<typename T>
 using Stack = std::stack<T>;
 
+// 集合
+template<typename T>
+using Set = std::unordered_set<T>;
 
 
 // 智能指针

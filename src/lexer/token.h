@@ -68,8 +68,6 @@ enum class TokenType {
     ES_EQLT,            // <=
     ES_GT,              // >
     ES_LT,              // <
-    ES_BIT_LEFT,        // <<
-    ES_BIT_RIGHT,       // >>
     ES_BIT_INVERSION,   // ~
     ES_SEMICOLON,       // ;
     ES_COMMA,           // , 

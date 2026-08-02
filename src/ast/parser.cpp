@@ -39,10 +39,12 @@ Precedence Parser::tokenPrecedence(TokenType type) {
         case TokenType::ES_ASSIGN:
             return Precedence::ASSIGN;
         case TokenType::ES_OR:
+        case TokenType::ES_BIT_OR:
             return Precedence::OR;
         case TokenType::ES_BIT_CARET:
             return Precedence::XOR;
         case TokenType::ES_AND:
+        case TokenType::ES_BIT_AND:
             return Precedence::AND;
         case TokenType::ES_EQUAL:
         case TokenType::ES_NOT_EQUAL:
@@ -84,6 +86,39 @@ UPtr<Program> Parser::parseProgram() {
         auto stmt = parseStatement();   // 交给解析函数执行
         if(stmt != nullptr) {
             program->statements.push_back(std::move(stmt));
+        } else {
+            nextToken();
+        }
+    }
+    return program;
+}
+
+UPtr<Program> Parser::parseProgramWithoutTopLevelStatements() {
+    // 只进行收集
+    // 创建程序对象
+    auto program = std::make_unique<Program>();
+    while(curToken_.getTokenType() != TokenType::ES_EOF) {
+        auto stmt = parseStatement();   // 交给解析函数执行
+        if(stmt != nullptr) {
+            NodeType tp = stmt->type();
+            switch(tp) {
+                // 只允许注解语句、函数声明、结构体声明、枚举声明、let 、 const语句
+                // import , export
+                case NodeType::ANNOTATION_STATEMENT:
+                case NodeType::FUNCTION_DECLARE_STATEMENT:
+                case NodeType::STRUCT_DECLARE_STATEMENT:
+                case NodeType::ENUM_DECLARE_STATEMENT:
+                case NodeType::LET_STATEMENT:
+                case NodeType::CONST_STATEMENT:
+                case NodeType::IMPORT_STATEMENT:
+                case NodeType::EXPORT_STATEMENT:
+                    program->statements.push_back(std::move(stmt));
+                    break;
+                default:
+                    ErrorInfo ei(curToken_);
+                    ei.setMsg(" not allow excutable expression ",ErrorType::LEXER);
+                    errors_.push_back(ei);
+            }
         } else {
             nextToken();
         }
@@ -139,6 +174,9 @@ UPtr<Statement> Parser::parseStatement() {
         case TokenType::ES_AT:
             // 解析注解
             return parseAnnotationStatement();
+        case TokenType::ES_LBRACE:
+            // 解析块语句
+            return parseBlockStatement();
         default:
             return parseExpressionStatement();
     }
@@ -786,6 +824,7 @@ UPtr<SwitchStatement> Parser::parseSwitchStatement() {
         errors_.push_back(ei);
         return nullptr;
     }
+    stmt->condition = std::move(expr);
 
     // 现在应该是 )
     if(!curTokenIs(TokenType::ES_RPAREN)) {
@@ -937,6 +976,10 @@ UPtr<ForStatement> Parser::parseForStatement() {
 
         // 关键分支：看 curToken 是 = (C风格) 还是 in (for-in)
         if(curTokenIs(TokenType::ES_IN)) {
+            ErrorInfo ei(curToken_);
+            ei.setMsg("unsupport for-in grammar",ErrorType::ASTBUILD);
+            errors_.push_back(ei);
+            return nullptr;
             // ==================== for-in ====================
             nextToken();    // 跳过 in
             auto iterable = parseExpression(Precedence::LOWEST);
@@ -965,12 +1008,10 @@ UPtr<ForStatement> Parser::parseForStatement() {
 
             // ---- 翻译 for(let i in iterable){body} 为 C 风格 ----
             // 构造唯一临时变量名
-            static int forTempCounter = 0;
             String idxName = "$idx";
             Token idxToken;
             idxToken.setTL(TokenType::ES_IDENT, idxName);
 
-            // 1. init: let __fo_0 = 0;
             auto idxLet = std::make_unique<LetStatement>();
             idxLet->token = idxToken;
             auto idxIdent = std::make_unique<Identifier>();
@@ -981,6 +1022,12 @@ UPtr<ForStatement> Parser::parseForStatement() {
             zeroLit->value = "0";
             idxLet->value = std::move(zeroLit);
             stmt->init = std::move(idxLet);
+            auto typeLit = std::make_unique<TypeLiteral>();
+
+            Token tk = Token(TokenType::ES_I32,"i32");
+            typeLit->name = tk.getLiteral();
+            typeLit->token = tk;
+            idxLet->varType = std::move(typeLit);
 
             // 2. condition: __fo_0 < len(iterable)
             auto condLeft = std::make_unique<Identifier>();
@@ -1061,8 +1108,17 @@ UPtr<ForStatement> Parser::parseForStatement() {
             stmt->body = std::move(forBody);
             return stmt;
 
-        } else if(curTokenIs(TokenType::ES_ASSIGN)) {
-            // ==================== C风格 for(let x = expr; ...) ====================
+        } else if(curTokenIs(TokenType::ES_COLON)) {
+            // ==================== C风格 for(let x : type = expr; ...) ====================
+            nextToken();    // 跳过 :
+            auto initType = parseTypeLiteral();
+
+            if(!curTokenIs(TokenType::ES_ASSIGN)) {
+                ErrorInfo ei(curToken_);
+                ei.setMsg("for need = after type",ErrorType::ASTBUILD);
+                errors_.push_back(ei);
+                return nullptr;
+            }
             nextToken();    // 跳过 =
             auto initVal = parseExpression(Precedence::LOWEST);
             if(!initVal) {
@@ -1080,17 +1136,19 @@ UPtr<ForStatement> Parser::parseForStatement() {
             }
             nextToken();
 
-            // 手动构造 init 语句（不强制类型标注）
+            // 强制类型标注
             if(isConst) {
                 auto constStmt = std::make_unique<ConstStatement>();
                 constStmt->token = varIdent->token;
                 constStmt->name = std::move(varIdent);
+                constStmt->varType = std::move(initType);
                 constStmt->value = std::move(initVal);
                 stmt->init = std::move(constStmt);
             } else {
                 auto letStmt = std::make_unique<LetStatement>();
                 letStmt->token = varIdent->token;
                 letStmt->name = std::move(varIdent);
+                letStmt->varType = std::move(initType);
                 letStmt->value = std::move(initVal);
                 stmt->init = std::move(letStmt);
             }
@@ -1125,7 +1183,7 @@ UPtr<ForStatement> Parser::parseForStatement() {
             return stmt;
         } else {
             ErrorInfo ei(curToken_);
-            ei.setMsg("for init invalid, need = or in",ErrorType::ASTBUILD);
+            ei.setMsg("for init invalid, need : type = expr or in iterable",ErrorType::ASTBUILD);
             errors_.push_back(ei);
             return nullptr;
         }
@@ -1341,6 +1399,7 @@ UPtr<FunctionDeclareStatement> Parser::parseFunctionDeclareStatement() {
 
     // 现在指向的是 { 或者 ;
     if(curTokenIs(TokenType::ES_SEMICOLON)) {
+        nextToken();
         return fd;
     } else if(curTokenIs(TokenType::ES_LBRACE)) {
         // 解析 block语句
@@ -1390,6 +1449,7 @@ UPtr<StructDeclareStatement> Parser::parseStructDeclareStatement() {
         errors_.push_back(ei);
         return nullptr;
     }
+    decl->name = std::move(UPtr<Identifier>(static_cast<Identifier*>(ident.release())));
 
     if(!curTokenIs(TokenType::ES_LBRACE)) {
         ErrorInfo ei(curToken_);
@@ -1864,26 +1924,29 @@ UPtr<IndexExpression> Parser::parseIndexExpression(UPtr<Expression> left) {
 }
 
 UPtr<MemberAccessExpression> Parser::parseMemberAccessExpression(UPtr<Expression> left) {
-    auto expr = std::make_unique<MemberAccessExpression>();
-    // 现在是 .
-    expr->token = curToken_;
-    expr->object = std::move(left);
-    nextToken();
+      auto expr = std::make_unique<MemberAccessExpression>();
+      expr->token = curToken_;
+      expr->object = std::move(left);    // object = r
+      nextToken();                        // 消费 .
 
-    // 现在右边是函数名或者成员
-    auto called = parseExpression(Precedence::LOWEST);
+      // 右边必须是标识符（成员名）
+      if(!curTokenIs(TokenType::ES_IDENT)) {
+          ErrorInfo ei(curToken_);
+          ei.setMsg("member access need a name after .", ErrorType::ASTBUILD);
+          errors_.push_back(ei);
+          return nullptr;
+      }
+      auto name = parseIdentifier();      // 只解析 w，不再 parseExpression
 
-    if(!called) {
-        ErrorInfo ei(curToken_);
-        ei.setMsg("fatal parser member access",ErrorType::ASTBUILD);
-        errors_.push_back(ei);
-        return nullptr;
-    }
-
-    expr->called = std::move(called);
-
-    return expr;
-}
+      // 如果后面是 ( → 方法调用 p.getName()
+      if(curTokenIs(TokenType::ES_LPAREN)) {
+          auto call = parseCallExpression(std::move(name));
+          expr->called = std::move(call);  // called = CallExpression(getName)
+      } else {
+          expr->called = std::move(name);  // called = Identifier(w)
+      }
+      return expr;
+  }
 Parser::PrefixFn Parser::prefixParseFn(TokenType type) {
     switch(type) {
         case TokenType::ES_MINUS:
@@ -1919,21 +1982,23 @@ Parser::PrefixFn Parser::prefixParseFn(TokenType type) {
 Parser::InfixFn Parser::infixParseFn(TokenType type) {
     // 1 + 1 , 1 * 1 ... LEFT OP RIGHT
     switch(type) {
-        case TokenType::ES_PLUS:
-        case TokenType::ES_MINUS:
-        case TokenType::ES_MULTI:
-        case TokenType::ES_DIV:
-        case TokenType::ES_MOD:
-        case TokenType::ES_BIT_AND:
-        case TokenType::ES_BIT_OR:
-        case TokenType::ES_BIT_CARET:
-        case TokenType::ES_ASSIGN:
-        case TokenType::ES_NOT_EQUAL:
-        case TokenType::ES_EQUAL:
-        case TokenType::ES_EQGT:
-        case TokenType::ES_EQLT:
-        case TokenType::ES_LT:
-        case TokenType::ES_GT:
+        case TokenType::ES_PLUS:        // +
+        case TokenType::ES_MINUS:       // -
+        case TokenType::ES_MULTI:       // *
+        case TokenType::ES_DIV:         // /
+        case TokenType::ES_MOD:         // %
+        case TokenType::ES_BIT_AND:     // &
+        case TokenType::ES_BIT_OR:      // |
+        case TokenType::ES_BIT_CARET:   // ^
+        case TokenType::ES_ASSIGN:      // =
+        case TokenType::ES_NOT_EQUAL:   // !=
+        case TokenType::ES_EQUAL:       // ==
+        case TokenType::ES_EQGT:        // >=
+        case TokenType::ES_EQLT:        // <=
+        case TokenType::ES_LT:          // <
+        case TokenType::ES_GT:          // >
+        case TokenType::ES_AND:         // and
+        case TokenType::ES_OR:          // or
             return [this](auto left){return parseInfixExpression(std::move(left));};
         case TokenType::ES_LPAREN:  // 函数调用
             return [this](auto left){return parseCallExpression(std::move(left));} ;
@@ -1941,7 +2006,7 @@ Parser::InfixFn Parser::infixParseFn(TokenType type) {
             return [this](auto left){return parseIndexExpression(std::move(left));};
         case TokenType::ES_DOT:
             return [this](auto left){return parseMemberAccessExpression(std::move(left)); };
-            default:
+        default:
             return nullptr;
     }
 }

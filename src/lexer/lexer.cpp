@@ -48,6 +48,7 @@ Token Lexer::nextToken() {
         case '!' :
             // 需要分析是非还是不等于
             if(peekChar() == '=') {
+                readChar();
                 tk.setTL(TokenType::ES_NOT_EQUAL,"!=");
             } else {
                 tk.setTL(TokenType::ES_NOT,"!");

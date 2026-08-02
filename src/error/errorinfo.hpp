@@ -5,6 +5,7 @@
 #include <src/lexer/token.h>
 #include <ostream>
 #include <sstream>
+#include <fstream>
 class Token;
 enum ErrorType {
     NONE = 0,
@@ -29,6 +30,8 @@ private:
                 return "lexerial error: ";
             case ErrorType::ASTBUILD:
                 return "ast build error: ";
+            default:
+                return "unknown error: ";
         }
     }
 public:
@@ -48,14 +51,28 @@ public:
             this->et = et;
         }
     }
-    void println(std::ostream& os) {
+    void println(std::ostream& os) const {
         std::stringstream ss;
         ss<<getErrorMsgHeader(this->et);
         ss<<" at line: "<<this->line<<" col : "<<this->col<<" , ";
         ss<<this->msg<<" "<<std::endl;
         os<<ss.str();
     }
-    void print(std::ostream& os) {
+    void print(std::ostream& os) const{
+        std::stringstream ss;
+        ss<<getErrorMsgHeader(this->et);
+        ss<<" at line: "<<this->line<<" col : "<<this->col<<" , ";
+        ss<<this->msg<<" ";
+        os<<ss.str();
+    }
+    void println(std::ofstream& os) const{
+        std::stringstream ss;
+        ss<<getErrorMsgHeader(this->et);
+        ss<<" at line: "<<this->line<<" col : "<<this->col<<" , ";
+        ss<<this->msg<<" "<<std::endl;
+        os<<ss.str();
+    }
+    void print(std::ofstream& os) const {
         std::stringstream ss;
         ss<<getErrorMsgHeader(this->et);
         ss<<" at line: "<<this->line<<" col : "<<this->col<<" , ";

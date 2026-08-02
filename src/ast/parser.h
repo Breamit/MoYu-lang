@@ -69,6 +69,9 @@ public:
     // 解析程序
     UPtr<Program> parseProgram();
 
+    // 不允许顶层存在可执行语句的解析程序
+    UPtr<Program> parseProgramWithoutTopLevelStatements();
+
     // 解析语句
     UPtr<Statement> parseStatement();
 

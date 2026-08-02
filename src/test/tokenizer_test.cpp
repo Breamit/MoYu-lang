@@ -93,8 +93,6 @@ static String tokenTypeName(TokenType type) {
         case TokenType::ES_EQLT:           return "LE";
         case TokenType::ES_GT:             return "GT";
         case TokenType::ES_LT:             return "LT";
-        case TokenType::ES_BIT_LEFT:       return "BIT_LEFT";
-        case TokenType::ES_BIT_RIGHT:      return "BIT_RIGHT";
         case TokenType::ES_BIT_INVERSION:  return "BIT_INVERSION";
         case TokenType::ES_SEMICOLON:      return "SEMICOLON";
         case TokenType::ES_COMMA:          return "COMMA";
@@ -160,7 +158,7 @@ int main() {
     if(errs.size() != 0) {
         log<<"errors"<<"\n";
         for(auto& err : errs) {
-            log<<err.msg<<" at line = "<<err.line<<"  col =  "<<err.col<<"\n";
+            err.println(log);
         }
     }
 
