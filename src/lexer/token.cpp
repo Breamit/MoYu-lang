@@ -33,19 +33,19 @@ void Token::setTL(TokenType tt ,const String& l) {
 
 bool Token::isTypeToken() const {
     switch(this->type_) {
-        case TokenType::ES_I32:
-        case TokenType::ES_U32:
-        case TokenType::ES_I64:
-        case TokenType::ES_U64:
-        case TokenType::ES_F32:
-        case TokenType::ES_F64:
-        case TokenType::ES_STRING:
-        case TokenType::ES_MAP:
-        case TokenType::ES_LIST:
-        case TokenType::ES_BOOL:
-        case TokenType::ES_ANY:
-        case TokenType::ES_VOID:
-        case TokenType::ES_IDENT:
+        case TokenType::MY_I32:
+        case TokenType::MY_U32:
+        case TokenType::MY_I64:
+        case TokenType::MY_U64:
+        case TokenType::MY_F32:
+        case TokenType::MY_F64:
+        case TokenType::MY_STRING:
+        case TokenType::MY_MAP:
+        case TokenType::MY_LIST:
+        case TokenType::MY_BOOL:
+        case TokenType::MY_ANY:
+        case TokenType::MY_VOID:
+        case TokenType::MY_IDENT:
             return true;
         default:
             return false;
@@ -56,46 +56,46 @@ TokenType Token::lookUpIdent(const Token& tk) {
 
     // 定义全局唯一的关键字表
     static Map<String, TokenType> keywordsMap = {
-            {"let", TokenType::ES_LET},
-            {"const", TokenType::ES_CONST},
-            {"i32", TokenType::ES_I32},
-            {"u32", TokenType::ES_U32},
-            {"i64", TokenType::ES_I64},
-            {"u64", TokenType::ES_U64},
-            {"f32", TokenType::ES_F32},
-            {"f64", TokenType::ES_F64},
-            {"string", TokenType::ES_STRING},
-            {"map", TokenType::ES_MAP},
-            {"list", TokenType::ES_LIST},
-            {"bool", TokenType::ES_BOOL},
-            {"any", TokenType::ES_ANY},
-            {"for", TokenType::ES_FOR},
-            {"in", TokenType::ES_IN},
-            {"while", TokenType::ES_WHILE},
-            {"continue", TokenType::ES_CONTINUE},
-            {"break", TokenType::ES_BREAK},
-            {"if", TokenType::ES_IF},
-            {"else", TokenType::ES_ELSE},
-            {"elif", TokenType::ES_ELIF},
-            {"switch", TokenType::ES_SWITCH},
-            {"case", TokenType::ES_CASE},
-            {"default", TokenType::ES_DEFAULT},
-            {"fn", TokenType::ES_FUNCTION},
-            {"void", TokenType::ES_VOID},
-            {"return", TokenType::ES_RETURN},
-            {"struct", TokenType::ES_STRUCT},
-            {"null", TokenType::ES_NULL},
-            {"none",TokenType::ES_NONE},
-            {"enum", TokenType::ES_ENUM},
-            {"not", TokenType::ES_NOT},
-            {"and", TokenType::ES_AND},
-            {"or", TokenType::ES_OR},
-            {"import", TokenType::ES_IMPORT},
-            {"export", TokenType::ES_EXPORT},
-            {"as", TokenType::ES_AS},
-            {"await", TokenType::ES_AWAIT},
-            {"true", TokenType::ES_TRUE},
-            {"false", TokenType::ES_FALSE}
+            {"let", TokenType::MY_LET},
+            {"const", TokenType::MY_CONST},
+            {"i32", TokenType::MY_I32},
+            {"u32", TokenType::MY_U32},
+            {"i64", TokenType::MY_I64},
+            {"u64", TokenType::MY_U64},
+            {"f32", TokenType::MY_F32},
+            {"f64", TokenType::MY_F64},
+            {"string", TokenType::MY_STRING},
+            {"map", TokenType::MY_MAP},
+            {"list", TokenType::MY_LIST},
+            {"bool", TokenType::MY_BOOL},
+            {"any", TokenType::MY_ANY},
+            {"for", TokenType::MY_FOR},
+            {"in", TokenType::MY_IN},
+            {"while", TokenType::MY_WHILE},
+            {"continue", TokenType::MY_CONTINUE},
+            {"break", TokenType::MY_BREAK},
+            {"if", TokenType::MY_IF},
+            {"else", TokenType::MY_ELSE},
+            {"elif", TokenType::MY_ELIF},
+            {"switch", TokenType::MY_SWITCH},
+            {"case", TokenType::MY_CASE},
+            {"default", TokenType::MY_DEFAULT},
+            {"fn", TokenType::MY_FUNCTION},
+            {"void", TokenType::MY_VOID},
+            {"return", TokenType::MY_RETURN},
+            {"struct", TokenType::MY_STRUCT},
+            {"null", TokenType::MY_NULL},
+            {"none",TokenType::MY_NONE},
+            {"enum", TokenType::MY_ENUM},
+            {"not", TokenType::MY_NOT},
+            {"and", TokenType::MY_AND},
+            {"or", TokenType::MY_OR},
+            {"import", TokenType::MY_IMPORT},
+            {"export", TokenType::MY_EXPORT},
+            {"as", TokenType::MY_AS},
+            {"await", TokenType::MY_AWAIT},
+            {"true", TokenType::MY_TRUE},
+            {"false", TokenType::MY_FALSE}
         };
 
     // 如果识别到指定的关键字，就返回对应的TokenType。
@@ -104,7 +104,7 @@ TokenType Token::lookUpIdent(const Token& tk) {
     if(it != keywordsMap.end()) {
         return it->second;
     } else {
-        return TokenType::ES_IDENT;
+        return TokenType::MY_IDENT;
     }
 }
 

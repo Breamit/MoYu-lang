@@ -12,7 +12,7 @@ int syncReplMain() {
     std::string line;
     while(true) {
         // 打印提示符
-        std::cout << "es> " << std::flush;
+        std::cout << "moyu> " << std::flush;
 
         // 读一行；EOF 或出错退出
         if(!std::getline(std::cin, line)) {

@@ -10,82 +10,82 @@
 #include <src/type.h>
 #include <src/marco.h>
 enum class TokenType {
-    ES_ILEGALL = 0,     // 非法字符
-    ES_EOF,             // 文件结束
-    ES_LET,             // let
-    ES_CONST,           // const
-    ES_I32,             //i32
-    ES_U32,             //u32
-    ES_I64,             //i64
-    ES_U64,             //u64
-    ES_F32,             //f32
-    ES_F64,             //f64
-    ES_STRING,          //string
-    ES_MAP,             //map
-    ES_LIST,            //list
-    ES_BOOL,            //bool
-    ES_ANY,             //any
-    ES_LAMBDA,          //lambda 闭包类型标注
-    ES_FOR,             //for
-    ES_IN,              //in
-    ES_WHILE,           //while
-    ES_CONTINUE,        //continue
-    ES_BREAK,           //break
-    ES_IF,              //if
-    ES_ELSE,            //else
-    ES_ELIF,            //elif
-    ES_SWITCH,          //switch
-    ES_CASE,            //case
-    ES_DEFAULT,         //default
-    ES_FUNCTION,        //fn
-    ES_VOID,            //void
-    ES_RETURN,          //return
-    ES_AT,              //@
-    ES_STRUCT,          //struct
-    ES_NULL,            //null
-    ES_NONE,            // none
-    ES_ENUM,            //enum
-    ES_NOT,             //not
-    ES_AND,             //and
-    ES_OR,              //or
-    ES_IMPORT,          //import
-    ES_EXPORT,          //export
-    ES_AS,              //as
-    ES_AWAIT,           //await
-    ES_IDENT,           //标识符
-    ES_PLUS,            // +
-    ES_MINUS,           // -
-    ES_MULTI,           // *
-    ES_DIV,             // /
-    ES_MOD,             // %
-    ES_BIT_AND,         // &
-    ES_BIT_OR,          // |
-    ES_BIT_CARET,       // ^
-    ES_ASSIGN,          // =
-    ES_NOT_EQUAL,       // !=
-    ES_EQUAL,           // ==
-    ES_EQGT,            // >=
-    ES_EQLT,            // <=
-    ES_GT,              // >
-    ES_LT,              // <
-    ES_BIT_INVERSION,   // ~
-    ES_SEMICOLON,       // ;
-    ES_COMMA,           // , 
-    ES_LBRACE,          // {
-    ES_RBRACE,          // }
-    ES_LBRACK,          // [
-    ES_RBRACK,          // ]
-    ES_LPAREN,          // (
-    ES_RPAREN,          // )
-    ES_COLON,           // :
-    ES_DQUOTE,          // "
-    ES_SQUOTE,          // '
-    ES_DOT,             // .
-    ES_INTEGER,         // 整数字面量
-    ES_FLOATING,        // 浮点数字面量
-    ES_STRING_LITERAL,  // 字符串字面量（""或''包裹的内容）
-    ES_TRUE,            // true , 布尔字面量
-    ES_FALSE,           // false , 布尔字面量
+    MY_ILEGALL = 0,     // 非法字符
+    MY_EOF,             // 文件结束
+    MY_LET,             // let
+    MY_CONST,           // const
+    MY_I32,             //i32
+    MY_U32,             //u32
+    MY_I64,             //i64
+    MY_U64,             //u64
+    MY_F32,             //f32
+    MY_F64,             //f64
+    MY_STRING,          //string
+    MY_MAP,             //map
+    MY_LIST,            //list
+    MY_BOOL,            //bool
+    MY_ANY,             //any
+    MY_LAMBDA,          //lambda 闭包类型标注
+    MY_FOR,             //for
+    MY_IN,              //in
+    MY_WHILE,           //while
+    MY_CONTINUE,        //continue
+    MY_BREAK,           //break
+    MY_IF,              //if
+    MY_ELSE,            //else
+    MY_ELIF,            //elif
+    MY_SWITCH,          //switch
+    MY_CASE,            //case
+    MY_DEFAULT,         //default
+    MY_FUNCTION,        //fn
+    MY_VOID,            //void
+    MY_RETURN,          //return
+    MY_AT,              //@
+    MY_STRUCT,          //struct
+    MY_NULL,            //null
+    MY_NONE,            // none
+    MY_ENUM,            //enum
+    MY_NOT,             //not
+    MY_AND,             //and
+    MY_OR,              //or
+    MY_IMPORT,          //import
+    MY_EXPORT,          //export
+    MY_AS,              //as
+    MY_AWAIT,           //await
+    MY_IDENT,           //标识符
+    MY_PLUS,            // +
+    MY_MINUS,           // -
+    MY_MULTI,           // *
+    MY_DIV,             // /
+    MY_MOD,             // %
+    MY_BIT_AND,         // &
+    MY_BIT_OR,          // |
+    MY_BIT_CARET,       // ^
+    MY_ASSIGN,          // =
+    MY_NOT_EQUAL,       // !=
+    MY_EQUAL,           // ==
+    MY_EQGT,            // >=
+    MY_EQLT,            // <=
+    MY_GT,              // >
+    MY_LT,              // <
+    MY_BIT_INVERSION,   // ~
+    MY_SEMICOLON,       // ;
+    MY_COMMA,           // , 
+    MY_LBRACE,          // {
+    MY_RBRACE,          // }
+    MY_LBRACK,          // [
+    MY_RBRACK,          // ]
+    MY_LPAREN,          // (
+    MY_RPAREN,          // )
+    MY_COLON,           // :
+    MY_DQUOTE,          // "
+    MY_SQUOTE,          // '
+    MY_DOT,             // .
+    MY_INTEGER,         // 整数字面量
+    MY_FLOATING,        // 浮点数字面量
+    MY_STRING_LITERAL,  // 字符串字面量（""或''包裹的内容）
+    MY_TRUE,            // true , 布尔字面量
+    MY_FALSE,           // false , 布尔字面量
 };  
 
 class Token {
@@ -120,7 +120,7 @@ public:
     /**
      * @brief 用于区分字面量是不是关键字
      * @param 需要进行判断的token
-     * @return 如果是关键字，返回关键字的token，否则返回ES_IDENT
+     * @return 如果是关键字，返回关键字的token，否则返回MY_IDENT
      */
     static TokenType lookUpIdent(const Token& tk) ;
 };

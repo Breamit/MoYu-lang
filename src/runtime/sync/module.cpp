@@ -2,7 +2,7 @@
 
 ModuleLoader::ModuleLoader() {
     // io
-    setModulePath("io", "src/lib/io.es");
+    setModulePath("io", "src/lib/io.my");
 }
 
 void ModuleLoader::setModulePath(const String &name, const String &path) {
@@ -48,7 +48,7 @@ SPtr<ModuleObject> ModuleLoader::loadModuleImpl(const String &moduleName) {
     if(pit != pathMap_.end()) {
         path = pit->second;
     } else {
-        path = "src/lib/" + moduleName + ".es";
+        path = "src/lib/" + moduleName + ".my";
     }
 
     if(fileLoader_) {

@@ -36,90 +36,90 @@ static String readFile(const std::string& path) {
  */
 static String tokenTypeName(TokenType type) {
     switch (type) {
-        case TokenType::ES_ILEGALL:        return "ILLEGAL";
-        case TokenType::ES_EOF:            return "EOF";
-        case TokenType::ES_LET:            return "LET";
-        case TokenType::ES_CONST:          return "CONST";
-        case TokenType::ES_I32:            return "I32";
-        case TokenType::ES_U32:            return "U32";
-        case TokenType::ES_I64:            return "I64";
-        case TokenType::ES_U64:            return "U64";
-        case TokenType::ES_F32:            return "F32";
-        case TokenType::ES_F64:            return "F64";
-        case TokenType::ES_STRING:         return "STRING_TYPE";
-        case TokenType::ES_MAP:            return "MAP";
-        case TokenType::ES_LIST:           return "LIST";
-        case TokenType::ES_BOOL:           return "BOOL";
-        case TokenType::ES_ANY:            return "ANY";
-        case TokenType::ES_FOR:            return "FOR";
-        case TokenType::ES_IN:             return "IN";
-        case TokenType::ES_WHILE:          return "WHILE";
-        case TokenType::ES_CONTINUE:       return "CONTINUE";
-        case TokenType::ES_BREAK:          return "BREAK";
-        case TokenType::ES_IF:             return "IF";
-        case TokenType::ES_ELSE:           return "ELSE";
-        case TokenType::ES_ELIF:           return "ELIF";
-        case TokenType::ES_SWITCH:         return "SWITCH";
-        case TokenType::ES_CASE:           return "CASE";
-        case TokenType::ES_DEFAULT:        return "DEFAULT";
-        case TokenType::ES_FUNCTION:       return "FN";
-        case TokenType::ES_VOID:           return "VOID";
-        case TokenType::ES_RETURN:         return "RETURN";
-        case TokenType::ES_AT:             return "AT";
-        case TokenType::ES_STRUCT:         return "STRUCT";
-        case TokenType::ES_NULL:           return "NULL";
-        case TokenType::ES_NONE:           return "NONE";
-        case TokenType::ES_ENUM:           return "ENUM";
-        case TokenType::ES_NOT:            return "NOT";
-        case TokenType::ES_AND:            return "AND";
-        case TokenType::ES_OR:             return "OR";
-        case TokenType::ES_IMPORT:         return "IMPORT";
-        case TokenType::ES_EXPORT:         return "EXPORT";
-        case TokenType::ES_AS:             return "AS";
-        case TokenType::ES_AWAIT:          return "AWAIT";
-        case TokenType::ES_IDENT:          return "IDENTIFIER";
-        case TokenType::ES_PLUS:           return "PLUS";
-        case TokenType::ES_MINUS:          return "MINUS";
-        case TokenType::ES_MULTI:          return "MULTIPLY";
-        case TokenType::ES_DIV:            return "DIVIDE";
-        case TokenType::ES_MOD:            return "MOD";
-        case TokenType::ES_BIT_AND:        return "BIT_AND";
-        case TokenType::ES_BIT_OR:         return "BIT_OR";
-        case TokenType::ES_BIT_CARET:      return "BIT_CARET";
-        case TokenType::ES_ASSIGN:         return "ASSIGN";
-        case TokenType::ES_NOT_EQUAL:      return "NOT_EQUAL";
-        case TokenType::ES_EQUAL:          return "EQUAL";
-        case TokenType::ES_EQGT:           return "GE";
-        case TokenType::ES_EQLT:           return "LE";
-        case TokenType::ES_GT:             return "GT";
-        case TokenType::ES_LT:             return "LT";
-        case TokenType::ES_BIT_INVERSION:  return "BIT_INVERSION";
-        case TokenType::ES_SEMICOLON:      return "SEMICOLON";
-        case TokenType::ES_COMMA:          return "COMMA";
-        case TokenType::ES_LBRACE:         return "LBRACE";
-        case TokenType::ES_RBRACE:         return "RBRACE";
-        case TokenType::ES_LBRACK:         return "LBRACKET";
-        case TokenType::ES_RBRACK:         return "RBRACKET";
-        case TokenType::ES_LPAREN:         return "LPAREN";
-        case TokenType::ES_RPAREN:         return "RPAREN";
-        case TokenType::ES_COLON:          return "COLON";
-        case TokenType::ES_DQUOTE:         return "DQUOTE";
-        case TokenType::ES_SQUOTE:         return "SQUOTE";
-        case TokenType::ES_INTEGER:        return "INTEGER";
-        case TokenType::ES_FLOATING:       return "FLOATING";
-        case TokenType::ES_STRING_LITERAL: return "STRING_LITERAL";
-        case TokenType::ES_TRUE:           return "TRUE";
-        case TokenType::ES_FALSE:          return "FALSE";
+        case TokenType::MY_ILEGALL:        return "ILLEGAL";
+        case TokenType::MY_EOF:            return "EOF";
+        case TokenType::MY_LET:            return "LET";
+        case TokenType::MY_CONST:          return "CONST";
+        case TokenType::MY_I32:            return "I32";
+        case TokenType::MY_U32:            return "U32";
+        case TokenType::MY_I64:            return "I64";
+        case TokenType::MY_U64:            return "U64";
+        case TokenType::MY_F32:            return "F32";
+        case TokenType::MY_F64:            return "F64";
+        case TokenType::MY_STRING:         return "STRING_TYPE";
+        case TokenType::MY_MAP:            return "MAP";
+        case TokenType::MY_LIST:           return "LIST";
+        case TokenType::MY_BOOL:           return "BOOL";
+        case TokenType::MY_ANY:            return "ANY";
+        case TokenType::MY_FOR:            return "FOR";
+        case TokenType::MY_IN:             return "IN";
+        case TokenType::MY_WHILE:          return "WHILE";
+        case TokenType::MY_CONTINUE:       return "CONTINUE";
+        case TokenType::MY_BREAK:          return "BREAK";
+        case TokenType::MY_IF:             return "IF";
+        case TokenType::MY_ELSE:           return "ELSE";
+        case TokenType::MY_ELIF:           return "ELIF";
+        case TokenType::MY_SWITCH:         return "SWITCH";
+        case TokenType::MY_CASE:           return "CASE";
+        case TokenType::MY_DEFAULT:        return "DEFAULT";
+        case TokenType::MY_FUNCTION:       return "FN";
+        case TokenType::MY_VOID:           return "VOID";
+        case TokenType::MY_RETURN:         return "RETURN";
+        case TokenType::MY_AT:             return "AT";
+        case TokenType::MY_STRUCT:         return "STRUCT";
+        case TokenType::MY_NULL:           return "NULL";
+        case TokenType::MY_NONE:           return "NONE";
+        case TokenType::MY_ENUM:           return "ENUM";
+        case TokenType::MY_NOT:            return "NOT";
+        case TokenType::MY_AND:            return "AND";
+        case TokenType::MY_OR:             return "OR";
+        case TokenType::MY_IMPORT:         return "IMPORT";
+        case TokenType::MY_EXPORT:         return "EXPORT";
+        case TokenType::MY_AS:             return "AS";
+        case TokenType::MY_AWAIT:          return "AWAIT";
+        case TokenType::MY_IDENT:          return "IDENTIFIER";
+        case TokenType::MY_PLUS:           return "PLUS";
+        case TokenType::MY_MINUS:          return "MINUS";
+        case TokenType::MY_MULTI:          return "MULTIPLY";
+        case TokenType::MY_DIV:            return "DIVIDE";
+        case TokenType::MY_MOD:            return "MOD";
+        case TokenType::MY_BIT_AND:        return "BIT_AND";
+        case TokenType::MY_BIT_OR:         return "BIT_OR";
+        case TokenType::MY_BIT_CARET:      return "BIT_CARET";
+        case TokenType::MY_ASSIGN:         return "ASSIGN";
+        case TokenType::MY_NOT_EQUAL:      return "NOT_EQUAL";
+        case TokenType::MY_EQUAL:          return "EQUAL";
+        case TokenType::MY_EQGT:           return "GE";
+        case TokenType::MY_EQLT:           return "LE";
+        case TokenType::MY_GT:             return "GT";
+        case TokenType::MY_LT:             return "LT";
+        case TokenType::MY_BIT_INVERSION:  return "BIT_INVERSION";
+        case TokenType::MY_SEMICOLON:      return "SEMICOLON";
+        case TokenType::MY_COMMA:          return "COMMA";
+        case TokenType::MY_LBRACE:         return "LBRACE";
+        case TokenType::MY_RBRACE:         return "RBRACE";
+        case TokenType::MY_LBRACK:         return "LBRACKET";
+        case TokenType::MY_RBRACK:         return "RBRACKET";
+        case TokenType::MY_LPAREN:         return "LPAREN";
+        case TokenType::MY_RPAREN:         return "RPAREN";
+        case TokenType::MY_COLON:          return "COLON";
+        case TokenType::MY_DQUOTE:         return "DQUOTE";
+        case TokenType::MY_SQUOTE:         return "SQUOTE";
+        case TokenType::MY_INTEGER:        return "INTEGER";
+        case TokenType::MY_FLOATING:       return "FLOATING";
+        case TokenType::MY_STRING_LITERAL: return "STRING_LITERAL";
+        case TokenType::MY_TRUE:           return "TRUE";
+        case TokenType::MY_FALSE:          return "FALSE";
     }
     return "UNKNOWN";
 }
 
 int main() {
     std::string root    = getProjectRoot();
-    std::string inPath  = root + "/es_test_code/tokenizer_test.es";
+    std::string inPath  = root + "/es_test_code/tokenizer_test.my";
     std::string outPath = root + "/es_test_log/tokenizer_test.log";
 
-    // 1. 读取 .es 源文件
+    // 1. 读取 .my 源文件
     std::cout << "[INFO] Reading: " << inPath << std::endl;
     String source = readFile(inPath);
 
@@ -150,7 +150,7 @@ int main() {
 
         ++index;
 
-        if (type == TokenType::ES_EOF) {
+        if (type == TokenType::MY_EOF) {
             break;
         }
     }

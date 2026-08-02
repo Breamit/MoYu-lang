@@ -66,6 +66,9 @@ public:
     // 构造函数
     Parser(UPtr<Lexer> lexer);
 
+    // 获取错误信息
+    Array<ErrorInfo> getErrors() const;
+
     // 解析程序
     UPtr<Program> parseProgram();
 

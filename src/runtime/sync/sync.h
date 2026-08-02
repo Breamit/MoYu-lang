@@ -53,6 +53,9 @@ private:
     // infix
     SPtr<Object> evalInfixExpression(const InfixExpression* node, SPtr<Environment> env);
 
+    // assign
+    SPtr<Object> evalAssign(const InfixExpression* node, SPtr<Environment> env);
+
     // block
     SPtr<Object> evalBlockStatement(const BlockStatement* node, SPtr<Environment> env);
     

@@ -97,12 +97,14 @@ SPtr<Object> objectPlus(SPtr<Object> left, SPtr<Object> right) {
     auto rt = right->type();
 
     // 进行类型检查
-    if(!objectIn(lt, {ObjectType::I32, ObjectType::I64, ObjectType::U32, ObjectType::U64, ObjectType::BOOL, ObjectType::F32, ObjectType::F64})) {
+    if(!objectIn(lt, {ObjectType::I32, ObjectType::I64, ObjectType::U32, ObjectType::U64, ObjectType::BOOL, ObjectType::F32, ObjectType::F64,ObjectType::STRING})) {
         return std::make_shared<ErrorObject>("+ operator is not supported for this type");
     }
-    if(!objectIn(rt, {ObjectType::I32, ObjectType::I64, ObjectType::U32, ObjectType::U64, ObjectType::BOOL, ObjectType::F32, ObjectType::F64})) {
+    if(!objectIn(rt, {ObjectType::I32, ObjectType::I64, ObjectType::U32, ObjectType::U64, ObjectType::BOOL, ObjectType::F32, ObjectType::F64,ObjectType::STRING})) {
         return std::make_shared<ErrorObject>("+ operator is not supported for this type");
     }
+
+
 
     auto targetType = promote(lt, rt);
 
@@ -129,6 +131,15 @@ SPtr<Object> objectPlus(SPtr<Object> left, SPtr<Object> right) {
             return std::make_shared<F32Object>(toF64(left) + toF64(right));
         case ObjectType::F64:
             return std::make_shared<F64Object>(toF64(left) + toF64(right));
+        case ObjectType::STRING: {
+            // 左操作数必须是string才可以
+            if(lt != ObjectType::STRING) {
+                return std::make_shared<ErrorObject>("+ operator is not supported for this type,left operand must be string");
+            } else {
+                return std::make_shared<StringObject>(toString(left) + toString(right));
+            }
+        }
+            
         default:
             return std::make_shared<ErrorObject>("+ operator is not supported for this type");
     }    
@@ -179,7 +190,7 @@ SPtr<Object> objectMulti(SPtr<Object> left, SPtr<Object> right) {
     auto rt = right->type();
 
     // 进行类型检查
-    if(!objectIn(lt, {ObjectType::I32, ObjectType::I64, ObjectType::U32, ObjectType::U64, ObjectType::F32, ObjectType::F64})) {
+    if(!objectIn(lt, {ObjectType::I32, ObjectType::I64, ObjectType::U32, ObjectType::U64, ObjectType::F32, ObjectType::F64,ObjectType::STRING})) {
         return std::make_shared<ErrorObject>("* operator is not supported for this type");
     }
     if(!objectIn(rt, {ObjectType::I32, ObjectType::I64, ObjectType::U32, ObjectType::U64, ObjectType::F32, ObjectType::F64})) {
@@ -206,6 +217,25 @@ SPtr<Object> objectMulti(SPtr<Object> left, SPtr<Object> right) {
             return std::make_shared<F32Object>(toF64(left) * toF64(right));
         case ObjectType::F64:
             return std::make_shared<F64Object>(toF64(left) * toF64(right));
+        case ObjectType::STRING: {
+            // 左操作数为string，右操作数必须大于零
+            if(lt != ObjectType::STRING) {
+                return std::make_shared<ErrorObject>("* operator is not supported for this type,left operand must be string");
+            } else {
+                auto fr = toU64(right);
+                if(fr < 0) {
+                    return std::make_shared<ErrorObject>("* operator is not supported for this type,right operand must be positive");
+                } else if(fr == 0) {
+                    return std::make_shared<StringObject>("");
+                } else {
+                    std::stringstream ss;
+                    for(u64 i = 0; i < fr; i++) {
+                        ss << toString(left);
+                    }
+                    return std::make_shared<StringObject>(ss.str());
+                }
+            }
+        }
         default:
             return std::make_shared<ErrorObject>("* operator is not supported for this type");
     }    
@@ -444,7 +474,7 @@ SPtr<Object> objectAssign(SPtr<Object> left, SPtr<Object> right) {
         // 基础数据类型可以进行类型提升赋值，这里使用拷贝而不是移动
         // 左操作数支持 i32,u32,i64,u64,f32,f64
         // 右操作数支持 i32,u32,i64,u64,f32,f64,bool
-        if(!objectIn(left->type(),{ObjectType::I32,ObjectType::U32,ObjectType::I64,ObjectType::U64,ObjectType::F32,ObjectType::F64})) {
+        if(!objectIn(left->type(),{ObjectType::I32,ObjectType::U32,ObjectType::I64,ObjectType::U64,ObjectType::F32,ObjectType::F64,ObjectType::NIL})) {
             return std::make_shared<ErrorObject>("= operator is not supported for this type");
         }
         if(!objectIn(right->type(),{ObjectType::I32,ObjectType::U32,ObjectType::I64,ObjectType::U64,ObjectType::F32,ObjectType::F64,ObjectType::BOOL})) {
@@ -487,6 +517,10 @@ SPtr<Object> objectAssign(SPtr<Object> left, SPtr<Object> right) {
                 auto lv = static_cast<F64Object*>(left.get());
                 auto rv = toF64(right);
                 lv->value = rv;
+                return left;
+            }
+            case ObjectType::NIL: {
+                left = std::move(right);
                 return left;
             }
             default:
@@ -796,14 +830,19 @@ bool toBool(SPtr<Object> obj) {
     }
 }
 
+String toString(SPtr<Object> obj) {
+    return String(obj->inspect());
+}
+
 ObjectType promote(ObjectType lt, ObjectType rt) {
     // 类型提升规则（C 语言 usual arithmetic conversions 的简化版）
-    // 1. 只要有 F64，提升到 F64
-    // 2. 有 F32，提升到 F32
-    // 3. 有 U64，提升到 U64
-    // 4. 有 I64，提升到 I64
-    // 5. 有 U32，提升到 U32
-    // 6. 否则 I32
+    // 1. 有 STRING，提升到 STRING
+    // 2. 只要有 F64，提升到 F64
+    // 3. 有 F32，提升到 F32
+    // 4. 有 U64，提升到 U64
+    // 5. 有 I64，提升到 I64
+    // 6. 有 U32，提升到 U32
+    // 7. 否则 I32
     // 注意：i64 与 u64 混算会按 u64 提升（和 C 一致，负数会包错）
 
     // 先检查是否都是数值类型（含 bool），bool 视为 I32 参与提升
@@ -814,13 +853,13 @@ ObjectType promote(ObjectType lt, ObjectType rt) {
     ObjectType a = toInt(lt);
     ObjectType b = toInt(rt);
 
-    if(!objectIn(a, {ObjectType::I32,ObjectType::U32,ObjectType::I64,ObjectType::U64,ObjectType::F32,ObjectType::F64})) {
+    if(!objectIn(a, {ObjectType::I32,ObjectType::U32,ObjectType::I64,ObjectType::U64,ObjectType::F32,ObjectType::F64,ObjectType::STRING})) {
         return ObjectType::ERROR;
     }
-    if(!objectIn(b, {ObjectType::I32,ObjectType::U32,ObjectType::I64,ObjectType::U64,ObjectType::F32,ObjectType::F64})) {
+    if(!objectIn(b, {ObjectType::I32,ObjectType::U32,ObjectType::I64,ObjectType::U64,ObjectType::F32,ObjectType::F64,ObjectType::STRING})) {
         return ObjectType::ERROR;
     }
-
+    if(a == ObjectType::STRING || b == ObjectType::STRING) return ObjectType::STRING;
     if(a == ObjectType::F64 || b == ObjectType::F64) return ObjectType::F64;
     if(a == ObjectType::F32 || b == ObjectType::F32) return ObjectType::F32;
     if(a == ObjectType::U64 || b == ObjectType::U64) return ObjectType::U64;

@@ -5,12 +5,6 @@
 #include <src/type.h>
 #include <src/object/object.hpp>
 
-enum class ModuleStatus {
-    SUCCESS = 0,
-    FAILED,
-    CYCLEQUOTE
-};
-
 class ModuleLoader {
 private:
     Set<String> loading_;

@@ -23,130 +23,130 @@ Token Lexer::nextToken() {
     switch(this->ch_) {
         case '@' :
             // 注解标识符
-            tk.setTL(TokenType::ES_AT,"@");
+            tk.setTL(TokenType::MY_AT,"@");
             break;
         case '+' :
             // plus 
-            tk.setTL(TokenType::ES_PLUS,"+");
+            tk.setTL(TokenType::MY_PLUS,"+");
             break;
         case '-' :
             // minus 
-            tk.setTL(TokenType::ES_MINUS,"-");
+            tk.setTL(TokenType::MY_MINUS,"-");
             break;
         case '*' :
             // multi
-            tk.setTL(TokenType::ES_MULTI,"*");
+            tk.setTL(TokenType::MY_MULTI,"*");
             break;
         case '/':
             // div
-            tk.setTL(TokenType::ES_DIV,"/");
+            tk.setTL(TokenType::MY_DIV,"/");
             break;
         case '%':
             // mod
-            tk.setTL(TokenType::ES_MOD,"%");
+            tk.setTL(TokenType::MY_MOD,"%");
             break;
         case '!' :
             // 需要分析是非还是不等于
             if(peekChar() == '=') {
                 readChar();
-                tk.setTL(TokenType::ES_NOT_EQUAL,"!=");
+                tk.setTL(TokenType::MY_NOT_EQUAL,"!=");
             } else {
-                tk.setTL(TokenType::ES_NOT,"!");
+                tk.setTL(TokenType::MY_NOT,"!");
             }
             break;
         case '&':
             // 按位与
-            tk.setTL(TokenType::ES_BIT_AND,"&");
+            tk.setTL(TokenType::MY_BIT_AND,"&");
             break;
         case '|':
             // 按位或
-            tk.setTL(TokenType::ES_BIT_OR,"|");
+            tk.setTL(TokenType::MY_BIT_OR,"|");
             break;
         case '^':
             // caret
-            tk.setTL(TokenType::ES_BIT_CARET,"^");
+            tk.setTL(TokenType::MY_BIT_CARET,"^");
             break;
         case '=':
             // assign
             if(peekChar() == '=' ) {
-                tk.setTL(TokenType::ES_EQUAL,"==");
+                tk.setTL(TokenType::MY_EQUAL,"==");
                 readChar();
             } else {
-                tk.setTL(TokenType::ES_ASSIGN,"=");
+                tk.setTL(TokenType::MY_ASSIGN,"=");
             }
             break;
         case '>':
             // greater
             if(peekChar() == '=') {
                 // >=
-                tk.setTL(TokenType::ES_EQGT,">=");
+                tk.setTL(TokenType::MY_EQGT,">=");
                 readChar();
             } else {
-                tk.setTL(TokenType::ES_GT,">");
+                tk.setTL(TokenType::MY_GT,">");
             }
             break;
         case '<':
             // lower
             if(peekChar() == '=') {
                 // <=
-                tk.setTL(TokenType::ES_EQLT,"<=");
+                tk.setTL(TokenType::MY_EQLT,"<=");
                 readChar();
             } else {
-                tk.setTL(TokenType::ES_LT,"<");
+                tk.setTL(TokenType::MY_LT,"<");
             }
             break;
         case '~':
             // inversion
-            tk.setTL(TokenType::ES_BIT_INVERSION,"~");
+            tk.setTL(TokenType::MY_BIT_INVERSION,"~");
             break;
         case ';':
             // semicolon
-            tk.setTL(TokenType::ES_SEMICOLON,";");
+            tk.setTL(TokenType::MY_SEMICOLON,";");
             break;
         case ',':
             // comma
-            tk.setTL(TokenType::ES_COMMA,",");
+            tk.setTL(TokenType::MY_COMMA,",");
             break;
         case '.':
             // dot
-            tk.setTL(TokenType::ES_DOT,".");
+            tk.setTL(TokenType::MY_DOT,".");
             break;
         case '{':
             // left brace
-            tk.setTL(TokenType::ES_LBRACE,"{");
+            tk.setTL(TokenType::MY_LBRACE,"{");
             break;
         case '}':
             // right brace
-            tk.setTL(TokenType::ES_RBRACE,"}");
+            tk.setTL(TokenType::MY_RBRACE,"}");
             break;
         case '[':
             // left brack
-            tk.setTL(TokenType::ES_LBRACK,"[");
+            tk.setTL(TokenType::MY_LBRACK,"[");
             break;
         case ']':
             // right brack
-            tk.setTL(TokenType::ES_RBRACK,"]");
+            tk.setTL(TokenType::MY_RBRACK,"]");
             break;
         case '(':
             // left paren
-            tk.setTL(TokenType::ES_LPAREN,"(");
+            tk.setTL(TokenType::MY_LPAREN,"(");
             break;
         case ')':
             // right paren
-            tk.setTL(TokenType::ES_RPAREN,")");
+            tk.setTL(TokenType::MY_RPAREN,")");
             break;
         case ':':
             // colon
-            tk.setTL(TokenType::ES_COLON,":");
+            tk.setTL(TokenType::MY_COLON,":");
             break;
         case '\"':
         case '\'':
             // 字符串字面量，统一处理，结果不含外层引号
-            tk.setTL(TokenType::ES_STRING_LITERAL, readString(this->ch_));
+            tk.setTL(TokenType::MY_STRING_LITERAL, readString(this->ch_));
             return tk;
         case '\0':
             // EOF
-            tk.setTL(TokenType::ES_EOF, "");
+            tk.setTL(TokenType::MY_EOF, "");
             return tk;
         case '#':
             // comment
@@ -165,20 +165,20 @@ Token Lexer::nextToken() {
                 if(num.find('.') != String::npos) {
                     //   只能有一个小数点
                     if(std::count(num.begin(),num.end(),'.') != 1) {
-                        tk.setTokenType(TokenType::ES_ILEGALL);
+                        tk.setTokenType(TokenType::MY_ILEGALL);
                     }
                     if(num.back() == '.') {
                         // 小数点结尾就加一个0，格式化处理
                         num += '.';
                     }
-                    tk.setTokenType(TokenType::ES_FLOATING);
+                    tk.setTokenType(TokenType::MY_FLOATING);
                 } else {
-                    tk.setTokenType(TokenType::ES_INTEGER);
+                    tk.setTokenType(TokenType::MY_INTEGER);
                 }
                 tk.setLiteral(num); 
                 return tk;
             } else {
-                tk.setTL(TokenType::ES_ILEGALL,String(1,this->ch_));
+                tk.setTL(TokenType::MY_ILEGALL,String(1,this->ch_));
                 ErrorInfo ei(tk);
                 ei.setMsg(" unknow token ",ErrorType::LEXER);
                 readChar();     // 跳过非法字符，否则会死循环

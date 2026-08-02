@@ -82,6 +82,9 @@ f64 toF64(SPtr<Object> num);
 // 转化成bool类型（真值判断）
 bool toBool(SPtr<Object> obj);
 
+// 转化成string类型
+String toString(SPtr<Object> obj);
+
 // 通过两个对象类型，返回一个需要被转化成的类型进行计算
 ObjectType promote(ObjectType lt , ObjectType rt);
 

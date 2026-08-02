@@ -33,10 +33,10 @@ static String readFile(const std::string& path) {
 
 int main() {
     std::string root    = getProjectRoot();
-    std::string inPath  = root + "/es_test_code/parser_test1.es";
+    std::string inPath  = root + "/es_test_code/parser_test1.my";
     std::string outPath = root + "/es_test_log/parser_test1.log";
 
-    // 1. 读取 .es 源文件
+    // 1. 读取 .my 源文件
     std::cout << "[INFO] Reading: " << inPath << std::endl;
     String source = readFile(inPath);
 
@@ -62,7 +62,7 @@ int main() {
     // while(true) {
     //     Token tk = lp->nextToken();
     //     log<<tk.getLiteral()<<std::endl;
-    //     if(tk.getTokenType() == TokenType::ES_EOF) {
+    //     if(tk.getTokenType() == TokenType::MY_EOF) {
     //         break;
     //     }
     // }

@@ -6,7 +6,7 @@
 #include <fstream>
 #include <filesystem>
 #include <sstream>
-
+#include <src/builtin/builtin.hpp>
 SPtr<BoolObject> SyncRuntime::True = std::make_shared<BoolObject>(true);
 SPtr<BoolObject> SyncRuntime::False = std::make_shared<BoolObject>(false);
 SPtr<NilObject>  SyncRuntime::Null = std::make_shared<NilObject>();
@@ -15,6 +15,10 @@ SPtr<NoneObject> SyncRuntime::None = std::make_shared<NoneObject>();
 
 SyncRuntime::SyncRuntime() {
     globalEnv = std::make_shared<Environment>();
+
+    // 注册内置函数
+    registerBuiltinFunctions(globalEnv);
+    
     exitCode = 0;
     // 装载全局程序
     // 模块文件加载回调：读文件 → parse → eval → 收集 export
@@ -26,12 +30,27 @@ SyncRuntime::SyncRuntime() {
         }
         return nullptr;
     });
+
+
 }
 
 u32 SyncRuntime::run(const String &content,String& res) {
     if(content.empty())return 0;
     UPtr<Lexer> l = std::make_unique<Lexer>(content);
+
+    if(!l->getErrors().empty()) {
+        for(const auto& err : l->getErrors()) {
+            err.println(std::cout);
+        }
+        return 1;
+    }
     Parser p(std::move(l));
+    if(!p.getErrors().empty()) {
+        for(const auto& err : p.getErrors()) {
+            err.println(std::cout);
+        }
+        return 1;
+    }
     auto node = p.parseProgram();
     auto result = eval(node.get(),globalEnv);
 
@@ -40,7 +59,10 @@ u32 SyncRuntime::run(const String &content,String& res) {
         res = "fatal eval";
         return exitCode;
     }
-    res = result->inspect();
+    if(result->type() == ObjectType::ERROR) {
+        std::cout<<result->inspect()<<std::endl;
+        return exitCode;
+    }
     return exitCode;
 }
 
@@ -343,10 +365,96 @@ SPtr<Object> SyncRuntime::evalPrefixExpression(const PrefixExpression *node, SPt
 
 SPtr<Object> SyncRuntime::evalInfixExpression(const InfixExpression *node, SPtr<Environment> env) {
     String op = node->op;
+    
+    if(op == "=") {
+        return evalAssign(node,env);
+    }
     auto left = eval(node->left.get(),env);
     auto right = eval(node->right.get(),env);
-
     return objectOperators(left,right,op);
+}
+
+SPtr<Object> SyncRuntime::evalAssign(const InfixExpression *node, SPtr<Environment> env) {
+    // 1. 先求值右操作数
+      auto right = eval(node->right.get(), env);
+      if(right != nullptr && right->type() == ObjectType::ERROR) {
+          return right;
+      }
+
+      // 2. 按左操作数节点类型分发写回
+      auto leftNode = node->left.get();
+      switch(leftNode->type()) {
+          // x = 10 → 变量已在环境里：保持原地改值（写透外层作用域）
+          case NodeType::IDENTIFIER: {
+              auto name = static_cast<const Identifier*>(leftNode)->value;
+              auto cur = env->get(name);
+              if(cur != nullptr && cur->type() == ObjectType::ERROR) {
+                  return cur;    // 变量不存在
+              }
+              return objectAssign(cur, right);
+          }
+
+          // p.y = 12 → 写回 struct 实例的字段
+          case NodeType::MEMBER_ACCESS_EXPRESSION: {
+              auto mem = static_cast<const MemberAccessExpression*>(leftNode);
+              // 求值 object 部分（p）
+              auto obj = eval(mem->object.get(), env);
+              if(obj != nullptr && obj->type() == ObjectType::ERROR) {
+                  return obj;
+              }
+              if(obj->type() != ObjectType::STRUCT) {
+                  return std::make_shared<ErrorObject>("field assignment needs a struct instance");
+              }
+              if(mem->called->type() != NodeType::IDENTIFIER) {
+                  return std::make_shared<ErrorObject>("field name must be an identifier");
+              }
+              auto inst = static_cast<StructObject*>(obj.get());
+              String fieldName = static_cast<const Identifier*>(mem->called.get())->value;
+              // 字段已存在 → 替换值；不存在 → 追加（容忍构造时缺省的字段）
+              for(auto& [name, val] : inst->fields) {
+                  if(name == fieldName) {
+                      val = right;
+                      return right;
+                  }
+              }
+              inst->fields.push_back({fieldName, right});
+              return right;
+          }
+
+          // list[i] = v / map[k] = v → 写回容器（顺带修好 list/map 赋值）
+          case NodeType::INDEX_EXPRESSION: {
+              auto idx = static_cast<const IndexExpression*>(leftNode);
+              auto container = eval(idx->left.get(), env);
+              if(container != nullptr && container->type() == ObjectType::ERROR) {
+                  return container;
+              }
+              auto index = eval(idx->index.get(), env);
+              if(index != nullptr && index->type() == ObjectType::ERROR) {
+                  return index;
+              }
+              switch(container->type()) {
+                  case ObjectType::LIST: {
+                      auto arr = static_cast<ListObject*>(container.get());
+                      auto i = toU64(index);
+                      if(i >= arr->value.size()) {
+                          return std::make_shared<ErrorObject>("Index out of range");
+                      }
+                      arr->value[i] = right;
+                      return right;
+                  }
+                  case ObjectType::MAP: {
+                      auto hash = static_cast<MapObject*>(container.get());
+                      hash->value[index] = right;
+                      return right;
+                  }
+                  default:
+                      return std::make_shared<ErrorObject>("index assignment needs a list or map");
+              }
+          }
+
+          default:
+              return std::make_shared<ErrorObject>("= operator is not supported for this expression");
+      }
 }
 
 SPtr<Object> SyncRuntime::evalBlockStatement(const BlockStatement *node, SPtr<Environment> env) {

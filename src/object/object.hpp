@@ -66,6 +66,7 @@ public:
     virtual ~Object() = default;
     virtual ObjectType type() const = 0;
     virtual String inspect() const = 0;
+    virtual String typeInspect() const = 0;
 };
 
 
@@ -80,6 +81,9 @@ public:
     }
     String inspect() const {
         return std::to_string(value);
+    }
+    String typeInspect() const {
+        return "i32";
     }
     ~I32Object() = default;
 };
@@ -96,6 +100,9 @@ public:
     String inspect() const {
         return std::to_string(value);
     }
+    String typeInspect() const {
+        return "u32";
+    }
     ~U32Object() = default;
 };
 
@@ -110,6 +117,9 @@ public:
     }
     String inspect() const {
         return std::to_string(value);
+    }
+    String typeInspect() const {
+        return "i64";
     }
     ~I64Object() = default;
 };
@@ -126,6 +136,9 @@ public:
     String inspect() const {
         return std::to_string(value);
     }
+    String typeInspect() const {
+        return "u64";
+    }
     ~U64Object() = default;
 };
 
@@ -140,6 +153,9 @@ public:
     }
     String inspect() const {
         return std::to_string(value);
+    }
+    String typeInspect() const {
+        return "f32";
     }
     ~F32Object() = default;
 };
@@ -156,6 +172,9 @@ public:
     String inspect() const {
         return std::to_string(value);
     }
+    String typeInspect() const {
+        return "f64";
+    }
     ~F64Object() = default;
 };
 
@@ -171,6 +190,9 @@ public:
     String inspect() const {
         return value;
     }
+    String typeInspect() const {
+        return "string";
+    }
     ~StringObject() = default;
 };
 
@@ -185,6 +207,9 @@ public:
     }
     String inspect() const {
         return value ? "true" : "false";
+    }
+    String typeInspect() const {
+        return "bool";
     }
     ~BoolObject() = default;
 };
@@ -278,6 +303,9 @@ public:
         ss << "}";
         return ss.str();
     }
+    String typeInspect() const {
+        return "map";
+    }
     ~MapObject() = default;
 };
 
@@ -299,6 +327,9 @@ public:
         ss << "]";
         return ss.str();
     }
+    String typeInspect() const {
+        return "list";
+    }
     ~ListObject() = default;
 };
 
@@ -315,6 +346,9 @@ public:
         }
         return value->inspect();
     }
+    String typeInspect() const {
+        return value->typeInspect();
+    }
     ~AnyObject() = default;
 };
 
@@ -327,6 +361,9 @@ public:
     String inspect() const {
         return "null";
     }
+    String typeInspect() const {
+        return "nil";
+    }
     ~NilObject() = default;
 };
 
@@ -337,6 +374,9 @@ public:
         return ObjectType::NONE;
     }
     String inspect() const {
+        return "none";
+    }
+    String typeInspect() const {
         return "none";
     }
     ~NoneObject() = default;
@@ -356,6 +396,9 @@ public:
     String inspect() const {
         return "function(...):.. {...}";
     }
+    String typeInspect() const {
+        return "function";
+    }
     ~FunctionObject() = default;
 };
 
@@ -373,6 +416,10 @@ public:
     String inspect() const {
         return "Constructor Function";
     }
+    String typeInspect() const {
+        return "function";
+    }
+    ~ConstructorObject() = default;
 };
 
 // native
@@ -387,6 +434,9 @@ public:
     }
     String inspect() const {
         return "Native Function";
+    }
+    String typeInspect() const {
+        return "function";
     }
     ~NativeObject() = default;
 };
@@ -411,6 +461,9 @@ public:
         ss << "}";
         return ss.str();
     }
+    String typeInspect() const {
+        return structName;
+    }
     ~StructObject() = default;
 };
 
@@ -426,6 +479,9 @@ public:
     String inspect() const {
         return value->inspect();
     }
+    String typeInspect() const {
+        return value->typeInspect();
+    }
     ~ReturnObject() = default;
 };
 
@@ -440,6 +496,9 @@ public:
         return message;
     }
     ErrorObject(String msg) : message(std::move(msg)) {}
+    String typeInspect() const {
+        return "error";
+    }
     ~ErrorObject() = default;
 };
 
@@ -455,6 +514,9 @@ public:
     String inspect() const {
         return "struct " + structName + "{...}";
     }
+    String typeInspect() const {
+        return structName;
+    }
     ~StructDeclObject() = default;
 };
 
@@ -467,6 +529,9 @@ public:
     String inspect() const {
         return "break";
     }
+    String typeInspect() const {
+        return "break";
+    }
     ~BreakObject() = default;
 };
 
@@ -477,6 +542,9 @@ public:
         return ObjectType::CONTINUE;
     }
     String inspect() const {
+        return "continue";
+    }
+    String typeInspect() const {
         return "continue";
     }
     ~ContinueObject() = default;
@@ -492,6 +560,9 @@ public:
     }
     String inspect() const {
         return "module " + moduleName;
+    }
+    String typeInspect() const {
+        return moduleName;
     }
     ~ModuleObject() = default;
 };
