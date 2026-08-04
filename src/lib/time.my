@@ -1,0 +1,11 @@
+# 获取当前时间
+@native('time.now')
+fn now():u64;
+
+# 睡眠
+@native('time.sleep')
+fn sleep(ms:u64):void;
+
+# 格式化获取当前时间
+@native('time.format')
+fn format():string;

@@ -1,8 +1,6 @@
 /build/
-/es_test_log/
-/es_test_code/
-/*.md
+/my_test_log/
+/my_test_code/
 /*.py
-/my-language-extension/
-/docs/
 /dylib/
+/my-language-extension/

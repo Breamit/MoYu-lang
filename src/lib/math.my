@@ -1,0 +1,15 @@
+# 数学库
+# 开根号
+
+@native('math.sqrt')
+fn sqrt(x:u64):f64;
+
+@native('math.sqrtf')
+fn sqrtf(x:f64):f64;
+
+# 平方
+@native('math.pow')
+fn pow(base:f64, exp:f64):f64;
+
+# 取整
+

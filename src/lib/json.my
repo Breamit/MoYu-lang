@@ -1,0 +1,5 @@
+@native('json.parse')
+fn parse(json:string):map<string,any>;
+
+@native('json.stringify')
+fn stringify(obj:map<string,any>):string;

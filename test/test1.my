@@ -1,41 +1,44 @@
 import io;
-
 struct Point {
     x: i32,
     y: i32
 };
-
 @method(Point)
 fn out(self:Point):void {
     io.println('x: ',self.x, ' , y: ', self.y);
 }
-
 struct PointF {
     x: f32,
     y: f32
 };
-
 @method(PointF)
 fn out(self:PointF):void {
     io.println('x: ',self.x, ' , y: ', self.y);
 }
 
 
+fn fib(n:i32):i32 {
+    if(n<=1) {
+        return 1;
+    } else {
+        return fib(n-1) + fib(n-2);
+    }
+}
 
 fn main():void{
     let p1 : Point = Point({'x':12,'y':12});
     let p2 : PointF = PointF({'x':12.5,'y':12.5});
     p1.out();
     p2.out();
-
+    let res : i32 = fib(5);
+    io.println('fib(5) = ',res);
     let x1 : i32 = 0;
     let y1 : i32 = 0;
-
-    x1 = io.getInt();
-    y1 = io.getInt();
-
-    let p3 : Point = Point({'x':x1,'y':y1});
-    p3.out();
+    while(true) {
+        x1 = io.getInt();
+        y1 = io.getInt();
+        let p3 : Point = Point({'x':x1,'y':y1});
+        p3.out();
+    }
 }
-
 main();
