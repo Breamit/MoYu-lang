@@ -7,13 +7,8 @@
 #include <filesystem>
 #include <sstream>
 #include <src/builtin/builtin.hpp>
-SPtr<BoolObject> SyncRuntime::True = std::make_shared<BoolObject>(true);
-SPtr<BoolObject> SyncRuntime::False = std::make_shared<BoolObject>(false);
-SPtr<NilObject>  SyncRuntime::Null = std::make_shared<NilObject>();
-SPtr<NoneObject> SyncRuntime::None = std::make_shared<NoneObject>();     
 
-
-SyncRuntime::SyncRuntime() {
+SyncRuntime::SyncRuntime(const String& projectRoot) : moduleLoader_(projectRoot) {
     globalEnv = std::make_shared<Environment>();
 
     // 注册内置函数
@@ -52,6 +47,8 @@ u32 SyncRuntime::run(const String &content,String& res) {
         return 1;
     }
     auto node = p.parseProgram();
+    // 执行优化
+    executeMiddleware(node.get());
     auto result = eval(node.get(),globalEnv);
 
     programPool_.push_back(std::move(node));   // 缓存已解析的程序，保活 AST
@@ -128,6 +125,10 @@ SPtr<Object> SyncRuntime::eval(const Node* node, SPtr<Environment> env) {
             auto lit = dynamic_cast<const NullLiteral*>(node);
             if(!lit) { exitCode = 1; return nullptr; }
             return evalNull(lit);
+        } case NodeType::FUNCTION_LITERAL: {
+            auto lit = dynamic_cast<const FunctionLiteral*>(node);
+            if(!lit) { exitCode = 1; return nullptr; }
+            return evalFunctionLiteral(lit, env);
         } case NodeType::IDENTIFIER: {
             auto ident = dynamic_cast<const Identifier*>(node);
             if(!ident) { exitCode = 1; return nullptr; }
@@ -283,14 +284,29 @@ SPtr<Object> SyncRuntime::evalString(const StringLiteral *node) {
 SPtr<Object> SyncRuntime::evalBool(const BoolLiteral *node) {
     if(node->value) {
         // true
-        return SyncRuntime::True;
+        return True;
     } else {
-        return SyncRuntime::False;
+        return False;
     }
 }
 
 SPtr<Object> SyncRuntime::evalNull(const NullLiteral *node) {
-    return SyncRuntime::Null;
+    return Null;
+}
+
+SPtr<Object> SyncRuntime::evalFunctionLiteral(const FunctionLiteral *node, SPtr<Environment> env) {
+    Array<String> paramNames;
+    for(const auto& [paramName,paramType] : node->params) {
+        (void)paramType;
+        paramNames.push_back(static_cast<const Identifier*>(paramName.get())->value);
+    }
+    auto val = std::make_shared<FunctionObject>(
+        std::move(paramNames),
+        SPtr<BlockStatement>(const_cast<BlockStatement*>(node->body.get()),[](BlockStatement*){}),
+        env
+    );
+
+    return val;
 }
 
 SPtr<Object> SyncRuntime::evalIdentifier(const Identifier *node, SPtr<Environment> env) {
@@ -898,7 +914,7 @@ SPtr<Object> SyncRuntime::evalStructDeclareStatement(const StructDeclareStatemen
                     }
                 }
                 // 字段缺省 → 全局 Nil 单例
-                inst->fields.push_back({fieldName, value ? value : SyncRuntime::Null});
+                inst->fields.push_back({fieldName, value ? value : Null});
             }
             return inst;
         }
@@ -907,7 +923,7 @@ SPtr<Object> SyncRuntime::evalStructDeclareStatement(const StructDeclareStatemen
     ctor->name = def->structName;
     env->set(def->structName, ctor);
 
-    return SyncRuntime::Null;
+    return Null;
 }
 
 SPtr<Object> SyncRuntime::evalMemberAccessExpression(const MemberAccessExpression *node, SPtr<Environment> env) {
@@ -986,6 +1002,45 @@ SPtr<Object> SyncRuntime::evalMemberAccessExpression(const MemberAccessExpressio
         }
         auto inst = static_cast<StructObject*>(obj.get());
 
+        // 求值显式参数（字段调用和方法调用都用）
+        Array<SPtr<Object>> args;
+        for(const auto& argNode : call->arguments) {
+            auto argVal = eval(argNode.get(), env);
+            if(argVal != nullptr && argVal->type() == ObjectType::ERROR) {
+                return argVal;
+            }
+            args.push_back(argVal);
+        }
+
+        // 字段优先：方法名可能是存了 lambda/函数的字段（self.func(...)）
+        for(const auto& [fname, fval] : inst->fields) {
+            if(fname != methodName) continue;
+            if(fval == nullptr || (fval->type() != ObjectType::FUNCTION && fval->type() != ObjectType::NATIVE)) {
+                return std::make_shared<ErrorObject>(
+                    inst->structName + " field " + methodName + " is not callable");
+            }
+            if(fval->type() == ObjectType::NATIVE) {
+                auto native = static_cast<NativeObject*>(fval.get());
+                return native->func(args);
+            }
+            auto fn = static_cast<FunctionObject*>(fval.get());
+            if(fn->params.size() != args.size()) {
+                return std::make_shared<ErrorObject>("Call function with wrong number of arguments");
+            }
+            auto callEnv = std::make_shared<Environment>(fn->env);
+            for(size_t i = 0; i < fn->params.size(); i++) {
+                callEnv->set(fn->params[i], args[i]);
+            }
+            auto res = evalStatements(fn->body->statements, callEnv);
+            if(res != nullptr && res->type() == ObjectType::ERROR) {
+                return res;
+            }
+            if(res != nullptr && res->type() == ObjectType::RETURN) {
+                return static_cast<ReturnObject*>(res.get())->value;
+            }
+            return res;
+        }
+
         // 从类型环境查方法
         auto method = typeEnv.getMethod(inst->structName, methodName);
         if(method == nullptr) {
@@ -996,16 +1051,6 @@ SPtr<Object> SyncRuntime::evalMemberAccessExpression(const MemberAccessExpressio
             return std::make_shared<ErrorObject>("method is not a function");
         }
         auto fn = static_cast<FunctionObject*>(method.get());
-
-        // 求值显式参数
-        Array<SPtr<Object>> args;
-        for(const auto& argNode : call->arguments) {
-            auto argVal = eval(argNode.get(), env);
-            if(argVal != nullptr && argVal->type() == ObjectType::ERROR) {
-                return argVal;
-            }
-            args.push_back(argVal);
-        }
 
         // 参数个数检查：params[0] 是 self，显式参数从 params[1] 开始
         if(fn->params.size() != args.size() + 1) {
@@ -1136,7 +1181,7 @@ SPtr<Object> SyncRuntime::evalAnnotationStatement(const AnnotationStatement *nod
                 if(!implF) {
                     // 未注册就是不存在
                     return std::make_shared<ErrorObject>("not found the function");
-                } 
+                }
                 auto nativeObj = std::make_shared<NativeObject>(native->path,implF);
                 nativeObj->isAsync = isAsync;
                 env->set(fnStmt->name->value, nativeObj);
@@ -1191,6 +1236,8 @@ SPtr<Object> SyncRuntime::loadModuleFile(const String &path, const String &name)
 
     Parser p(std::move(l));
     auto node = p.parseProgram();
+    // 执行优化
+    executeMiddleware(node.get());
 
     // 独立env
     auto moduleEnv = std::make_shared<Environment>(nullptr);
@@ -1219,4 +1266,8 @@ void SyncRuntime::collectExports(const Program *program, SPtr<Environment> env, 
             }
         }
     }
+}
+
+void SyncRuntime::executeMiddleware(const Program *program) {
+    pass
 }

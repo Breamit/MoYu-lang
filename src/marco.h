@@ -5,5 +5,5 @@
 
 #define impl public
 #define interface class
-
+#define pass
 #endif

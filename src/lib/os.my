@@ -1,0 +1,43 @@
+
+# 获取当前工作目录
+@native('std.os.pwd')
+fn pwd():string;
+
+# 获取环境变量
+@native('std.os.getEnv')
+fn getEnv(name: string): string;
+
+# 设置环境变量
+@native('std.os.setEnv')
+fn setEnv(name: string, value: string): void;
+
+# 退出进程
+@native('std.os.exit')
+fn exit(code: int): void;
+
+# 等待毫秒
+@native('std.os.sleep')
+fn sleep(ms: int): void;
+
+# 获取进程ID
+@native('std.os.getPid')
+fn getPid(): u64;
+
+# 执行命令
+@native('std.os.exec')
+fn exec(cmd: string): i32;
+
+# 获取操作系统类型 ['WINDOWS','LINUX','UNKNOWN']
+@native('std.os.getOS')
+fn getOS():string;
+
+export {
+    pwd,
+    getEnv,
+    setEnv,
+    exit,
+    sleep,
+    getPid,
+    exec,
+    getOS,
+};

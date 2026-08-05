@@ -1,15 +1,104 @@
-# 数学库
-# 开根号
 
-@native('math.sqrt')
-fn sqrt(x:u64):f64;
+const PI : f64 = 3.141592653589793;
 
-@native('math.sqrtf')
+const E : f64 = 2.718281828459045;
+
+# 浮点绝对值
+@native('std.math.absf')
+fn absf(x:f64):f64;
+
+# 整数绝对值
+@native('std.math.abs')
+fn abs(x:u64):u64;
+
+# 符号函数
+@native('std.math.sign')
+fn sign(x:f64):i32 ;
+
+# 浮点平方根
+@native('std.math.sqrtf')
 fn sqrtf(x:f64):f64;
 
-# 平方
-@native('math.pow')
+# 整数平方根
+@native('std.math.sqrt')
+fn sqrt(x:u64):u64;
+
+# 底-幂
+@native('std.math.pow')
 fn pow(base:f64, exp:f64):f64;
 
-# 取整
+# e 指数
+@native('std.math.exp')
+fn exp(x:f64):f64;
 
+# 自然对数底数 e
+@native('std.math.ln')
+fn ln(x:f64):f64;
+
+# 对数底数 10
+@native('std.math.lg')
+fn lg(x:f64):f64;
+
+# 三角函数
+@native('std.math.sin')
+fn sin(x:f64):f64;
+
+@native('std.math.cos')
+fn cos(x:f64):f64;
+
+@native('std.math.tan') 
+fn tan(x:f64):f64;
+
+# 截断取整
+# 向上取整
+@native('std.math.ceil')
+fn ceil(x:f64):f64;
+
+# 向下取整
+@native('std.math.floor')
+fn floor(x:f64):f64;
+
+# 四舍五入
+@native('std.math.round')
+fn round(x:f64):f64;
+
+# 砍掉小数
+@native('std.math.trunc')
+fn trunc(x:f64):i64;
+
+# 最大值
+@native('std.math.max')
+fn max(x:f64, y:f64):f64 ;
+
+# 最小值
+@native('std.math.min')
+fn min(x:f64, y:f64):f64 ;
+
+# 限制范围 [min, max]
+@native('std.math.clamp')
+fn clamp(x:f64, min:f64, max:f64):f64;
+
+
+export {
+    PI,
+    E,
+    absf,
+    abs,
+    sign,
+    sqrtf,
+    sqrt,
+    pow,
+    exp,
+    ln,
+    lg,
+    sin,
+    cos,
+    tan,
+    ceil,
+    floor,
+    round,
+    trunc,
+    max,
+    min,
+    clamp,
+};

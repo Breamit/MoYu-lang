@@ -7,12 +7,13 @@
 
 class ModuleLoader {
 private:
+    String baseDir_;            // 项目根目录：模块文件相对路径的基准（空 = 当前 cwd）
     Set<String> loading_;
     Map<String,SPtr<ModuleObject>> cache_;
     Map<String,String> pathMap_;
     std::function<SPtr<ModuleObject>(const String& path, const String& name)> fileLoader_;
 public:
-    ModuleLoader();
+    ModuleLoader(const String& baseDir = "");
     ~ModuleLoader() = default;
 
     void setModulePath(const String& name , const String& path);

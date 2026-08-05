@@ -1,8 +1,19 @@
 #include "module.h"
+#include <filesystem>
 
-ModuleLoader::ModuleLoader() {
+ModuleLoader::ModuleLoader(const String& baseDir) : baseDir_(baseDir) {
     // io
     setModulePath("io", "src/lib/io.my");
+    // fs
+    setModulePath("fs", "src/lib/fs.my");
+    // json
+    setModulePath("json", "src/lib/json.my");
+    // math
+    setModulePath("math", "src/lib/math.my");
+    // os
+    setModulePath("os", "src/lib/os.my");
+    // time
+    setModulePath("time", "src/lib/time.my");
 }
 
 void ModuleLoader::setModulePath(const String &name, const String &path) {
@@ -49,6 +60,14 @@ SPtr<ModuleObject> ModuleLoader::loadModuleImpl(const String &moduleName) {
         path = pit->second;
     } else {
         path = "src/lib/" + moduleName + ".my";
+    }
+
+    // 相对路径 → 以项目根（baseDir_）为基准；baseDir_ 为空（REPL）则用当前 cwd
+    if(!baseDir_.empty()) {
+        std::filesystem::path p(path);
+        if(!p.is_absolute()) {
+            path = (std::filesystem::path(baseDir_) / path).string();
+        }
     }
 
     if(fileLoader_) {

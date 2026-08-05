@@ -568,4 +568,12 @@ public:
 };
 
 
+// 全局共享常量对象单例（inline 保证全程序唯一实例）
+// 共享即不可变：这些对象仅允许读取，禁止任何地方修改其 value
+inline SPtr<BoolObject> True  = std::make_shared<BoolObject>(true);
+inline SPtr<BoolObject> False = std::make_shared<BoolObject>(false);
+inline SPtr<NilObject>  Null  = std::make_shared<NilObject>();
+inline SPtr<NoneObject> None  = std::make_shared<NoneObject>();
+
+
 #endif

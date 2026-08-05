@@ -17,12 +17,9 @@ class SyncRuntime {
     Array<UPtr<Program>> programPool_;  // 程序池，缓存已解析的程序，适用于多文件或者repl的场景
     ModuleLoader moduleLoader_;          // 模块加载器，负责加载模块
     NativeRegistry nativeRegistry_;      // native 方法注册表，path -> func
-    static SPtr<BoolObject> True;
-    static SPtr<BoolObject> False;
-    static SPtr<NilObject>  Null;
-    static SPtr<NoneObject> None;               
 public:
-    SyncRuntime();
+    // projectRoot：项目根目录（模块文件 src/lib/ 的基准）；空 = 用当前 cwd（REPL）
+    SyncRuntime(const String& projectRoot = "");
     ~SyncRuntime() = default;
     u32 run(const String& content,String& res);
 private:
@@ -43,6 +40,15 @@ private:
 
     // nil 字面量求值
     SPtr<Object> evalNull(const NullLiteral* node );
+
+    // lambda 字面量求值
+    SPtr<Object> evalFunctionLiteral(const FunctionLiteral* node, SPtr<Environment> env);
+
+    // array literal
+    SPtr<Object> evalArrayLiteral(const ArrayLiteral* node, SPtr<Environment> env);
+
+    // map literal
+    SPtr<Object> evalMapLiteral(const MapLiteral* node, SPtr<Environment> env);
     
     // 纯标识符
     SPtr<Object> evalIdentifier(const Identifier* node, SPtr<Environment> env);
@@ -94,12 +100,6 @@ private:
     
     // call expression
     SPtr<Object> evalCallExpression(const CallExpression* node, SPtr<Environment> env);
-    
-    // array literal
-    SPtr<Object> evalArrayLiteral(const ArrayLiteral* node, SPtr<Environment> env);
-
-    // map literal
-    SPtr<Object> evalMapLiteral(const MapLiteral* node, SPtr<Environment> env);
 
     // index expression
     SPtr<Object> evalIndexExpression(const IndexExpression* node, SPtr<Environment> env);
@@ -128,6 +128,8 @@ private:
     // 收集export
     void collectExports(const Program* program , SPtr<Environment> env, SPtr<ModuleObject> mod);
 
+    // 执行中间件
+    void executeMiddleware(const Program* program);
 };
 
 #endif

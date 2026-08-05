@@ -33,8 +33,8 @@ static String readFile(const std::string& path) {
 
 int main() {
     std::string root    = getProjectRoot();
-    std::string inPath  = root + "/es_test_code/parser_test1.my";
-    std::string outPath = root + "/es_test_log/parser_test1.log";
+    std::string inPath  = root + "/my_test_code/parser_test1.my";
+    std::string outPath = root + "/my_test_log/parser_test1.log";
 
     // 1. 读取 .my 源文件
     std::cout << "[INFO] Reading: " << inPath << std::endl;

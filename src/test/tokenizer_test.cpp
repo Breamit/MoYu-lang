@@ -110,14 +110,17 @@ static String tokenTypeName(TokenType type) {
         case TokenType::MY_STRING_LITERAL: return "STRING_LITERAL";
         case TokenType::MY_TRUE:           return "TRUE";
         case TokenType::MY_FALSE:          return "FALSE";
+        case TokenType::MY_LAMBDA:         return "LAMBDA";
+        case TokenType::MY_BYTES:          return "BYTES";
+        case TokenType::MY_U8:             return "U8";
     }
     return "UNKNOWN";
 }
 
 int main() {
     std::string root    = getProjectRoot();
-    std::string inPath  = root + "/es_test_code/tokenizer_test.my";
-    std::string outPath = root + "/es_test_log/tokenizer_test.log";
+    std::string inPath  = root + "/my_test_code/tokenizer_test.my";
+    std::string outPath = root + "/my_test_log/tokenizer_test.log";
 
     // 1. 读取 .my 源文件
     std::cout << "[INFO] Reading: " << inPath << std::endl;

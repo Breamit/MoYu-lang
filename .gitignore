@@ -4,3 +4,8 @@
 /*.py
 /dylib/
 /my-language-extension/
+/rust/*/target/
+/*.md
+!/README.md
+/src/test/
+/test/

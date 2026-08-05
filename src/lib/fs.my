@@ -1,48 +1,74 @@
-
 # 阅读文本文件
-@native('fs.readText')
+@native('std.fs.readText')
 fn readText(path:string):string;
 
 # 写入文本文件
-@native('fs.writeText')
+@native('std.fs.writeText')
 fn writeText(path:string, text:string):void;
 
 # 检查文件或者目录是否存在
-@native('fs.exists')
+@native('std.fs.exists')
 fn exists(path:string):bool;
 
 # 创建目录
-@native('fs.mkdir')
+@native('std.fs.mkdir')
 fn mkdir(path:string):void;
 
 #删除目录
-@native('fs.rmdir')
+@native('std.fs.rmdir')
 fn rmdir(path:string):void;
 
 # 删除文件
-@native('fs.remove')
+@native('std.fs.remove')
 fn remove(path:string):void;
 
 # 是否是目录
-@native('fs.isDirectory')
+@native('std.fs.isDirectory')
 fn isDirectory(path:string):bool;
 
 # 追加文本
-@native('fs.appendText')
+@native('std.fs.appendText')
 fn appendText(path:string, text:string):void;
 
 # 文件创建时间
-@native('fs.createTimeOf')
+@native('std.fs.createTimeOf')
 fn createTimeOf(path:string):string;
 
 # 文件修改时间
-@native('fs.modifyTimeOf')
+@native('std.fs.modifyTimeOf')
 fn modifyTimeOf(path:string):string;
 
 # 获取绝对路径
-@native('fs.abspath')
+@native('std.fs.abspathOf')
 fn abspathOf(path:string):string;
 
 # 判断是不是绝对地址
-@native('fs.isAbsolute')
+@native('std.fs.isAbsolute')
 fn isAbsolute(path:string):bool;
+
+# 获取文件大小
+@native('std.fs.sizeOf')
+fn sizeOf(path:string):u64;
+
+# 列出目录下所有条目（name -> "file"/"dir"）
+@native('std.fs.listDir')
+fn listDir(path:string):map<string,string>;
+
+
+
+export {
+    readText,
+    writeText,
+    exists,
+    mkdir,
+    rmdir,
+    remove,
+    isDirectory,
+    appendText,
+    createTimeOf,
+    modifyTimeOf,
+    abspathOf,
+    isAbsolute,
+    sizeOf,
+    listDir,
+};

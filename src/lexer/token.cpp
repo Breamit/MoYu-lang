@@ -46,6 +46,9 @@ bool Token::isTypeToken() const {
         case TokenType::MY_ANY:
         case TokenType::MY_VOID:
         case TokenType::MY_IDENT:
+        case TokenType::MY_BYTES:
+        case TokenType::MY_U8:
+        case TokenType::MY_LAMBDA:
             return true;
         default:
             return false;
@@ -69,6 +72,9 @@ TokenType Token::lookUpIdent(const Token& tk) {
             {"list", TokenType::MY_LIST},
             {"bool", TokenType::MY_BOOL},
             {"any", TokenType::MY_ANY},
+            {"lambda", TokenType::MY_LAMBDA},
+            {"bytes", TokenType::MY_BYTES},
+            {"u8", TokenType::MY_U8},
             {"for", TokenType::MY_FOR},
             {"in", TokenType::MY_IN},
             {"while", TokenType::MY_WHILE},

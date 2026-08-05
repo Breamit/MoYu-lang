@@ -1,5 +1,11 @@
-@native('json.parse')
+@native('std.json.parse')
 fn parse(json:string):map<string,any>;
 
-@native('json.stringify')
+@native('std.json.stringify')
 fn stringify(obj:map<string,any>):string;
+
+
+export {
+    parse,
+    stringify,
+};

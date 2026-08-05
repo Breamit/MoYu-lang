@@ -169,7 +169,7 @@ Token Lexer::nextToken() {
                     }
                     if(num.back() == '.') {
                         // 小数点结尾就加一个0，格式化处理
-                        num += '.';
+                        num += '0';
                     }
                     tk.setTokenType(TokenType::MY_FLOATING);
                 } else {
@@ -238,19 +238,69 @@ String Lexer::readNumber(){
     return input_.substr(pos , position_ - pos);
 }
 String Lexer::readString(char quote) {
+    // 需要结局字符串的转义问题
     // 跳过开头的引号
     readChar();
-    u32 pos = position_;
+    std::stringstream ss;
     // 没有遇到结束符号或者相同的引号
     while(ch_ != quote && ch_ != '\0') {
+        if(ch_ == '\\') {
+            readChar(); // 消耗 '\'
+            switch(ch_) {
+                case 'a':
+                    ss<<'\a';
+                    readChar(); // 消耗掉 a
+                    continue;
+                case 'b':
+                    ss<<'\b';
+                    readChar(); // 消耗掉 b
+                    continue;
+                case 'f':
+                    ss<<'\f';
+                    readChar(); // 消耗掉 f
+                    continue;
+                case 'n':
+                    ss<<'\n';
+                    readChar(); // 消耗掉 n
+                    continue;
+                case 'r':
+                    ss<<'\r';
+                    readChar(); // 消耗掉 r
+                    continue;
+                case 't':
+                    ss<<'\t';
+                    readChar(); // 消耗掉 t
+                    continue;
+                case 'v':
+                    ss<<'\v';
+                    readChar(); // 消耗掉 v
+                    continue;
+                case '\\':
+                    ss<<'\\';
+                    readChar(); // 消耗掉 '\'
+                    continue;
+                case '\'':
+                    ss<<'\'';
+                    readChar(); // 消耗掉 \'
+                    continue;
+                case '\"':
+                    ss<<'\"';
+                    readChar(); // 消耗掉 \"
+                    continue;
+                case '\0':
+                    ss<<'\0';
+                    readChar(); // 消耗掉 \0
+                    continue;  
+            }
+        }
+        ss<<ch_;
         readChar();
     }
-    String res = input_.substr(pos , position_ - pos);
+    
     if(ch_ == quote) {
-        // 正常遇到引号结束
-        readChar(); // 消耗掉
+        readChar(); // 消耗掉引号
     }
-    return res;
+    return ss.str();
 }
 char Lexer::peekChar() {
     if(readPosition_ >= input_.size()) {

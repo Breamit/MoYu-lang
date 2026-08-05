@@ -390,54 +390,6 @@ public:
     ~MapLiteral() = default;
 };
 
-// 函数字面量
-class FunctionLiteral : impl Expression {
-public:
-    Token token;
-    Array<UPtr<Expression>> params;
-    UPtr<BlockStatement> body;
-    NodeType type() const {
-        return NodeType::FUNCTION_LITERAL;
-    }
-    String tokenLiteral() const override {
-        return token.getLiteral();
-    }
-    String toString() const override {
-        std::ostringstream oss;
-        oss << "{\"type\":\"FUNCTION_LITERAL\"";
-        oss << ",\"params\":[";
-        for (size_t i = 0; i < params.size(); i++) {
-            if (i > 0) oss << ",";
-            if (params[i]) oss << params[i]->toString();
-            else oss << "null";
-        }
-        oss << "]";
-        oss << ",\"body\":";
-        if (body) oss << body->toString();
-        else oss << "null";
-        oss << "}";
-        return oss.str();
-    }
-    void expressionNode() override {}
-    ~FunctionLiteral() = default;
-};
-
-// null 字面量
-class NullLiteral : impl Expression {
-public:
-    NodeType type() const {
-        return NodeType::NULL_LITERAL;
-    }
-    String tokenLiteral() const override {
-        return "null";
-    }
-    String toString() const override {
-        return "{\"type\":\"NULL_LITERAL\"}";
-    }
-    void expressionNode() override {}
-    ~NullLiteral() = default;
-};
-
 class TypeLiteral : impl Expression {
 public:
     Token token;
@@ -468,6 +420,66 @@ public:
     void expressionNode() override {}
     ~TypeLiteral() = default;
 };
+
+
+// 函数字面量
+class FunctionLiteral : impl Expression {
+public:
+    Token token;
+    Array<Pair<UPtr<Expression>,UPtr<TypeLiteral>>> params;
+    UPtr<BlockStatement> body;
+    UPtr<TypeLiteral> returnType; // 返回类型
+    NodeType type() const {
+        return NodeType::FUNCTION_LITERAL;
+    }
+    String tokenLiteral() const override {
+        return token.getLiteral();
+    }
+    String toString() const override {
+        std::ostringstream oss;
+        oss << "{\"type\":\"FUNCTION_LITERAL\"";
+        oss << ",\"params\":[";
+        for (size_t i = 0; i < params.size(); i++) {
+            if (i > 0) oss << ",";
+            if (params[i].first) oss << "{\"name\":";
+            if (params[i].first) oss << params[i].first->toString();
+            else oss << "null";
+            oss << ",\"varType\":";
+            if (params[i].second) oss << params[i].second->toString();
+            else oss << "null";
+            oss << "}";
+        }
+        oss << "]";
+        oss << ",\"body\":";
+        if (body) oss << body->toString();
+        else oss << "null";
+        oss << ",\"returnType\":";
+        if (returnType) oss << returnType->toString();
+        else oss << "null";
+        oss << "}";
+        return oss.str();
+    }
+    void expressionNode() override {}
+    ~FunctionLiteral() = default;
+};
+
+// null 字面量
+class NullLiteral : impl Expression {
+public:
+    NodeType type() const {
+        return NodeType::NULL_LITERAL;
+    }
+    String tokenLiteral() const override {
+        return "null";
+    }
+    String toString() const override {
+        return "{\"type\":\"NULL_LITERAL\"}";
+    }
+    void expressionNode() override {}
+    ~NullLiteral() = default;
+};
+
+
 
 /**
  * 语句对象

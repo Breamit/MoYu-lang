@@ -1,20 +1,20 @@
 
-@native('io.print')
+@native('std.io.print')
 fn print(content:list<any>):void;
 
-@native('io.println')
+@native('std.io.println')
 fn println(content:list<any>):void;
 
-@native('io.getStr')
+@native('std.io.getStr')
 fn getStr():void;
 
-@native('io.getLine')
+@native('std.io.getLine')
 fn getLine():void;
 
-@native('io.getFloat')
+@native('std.io.getFloat')
 fn getFloat():void;
 
-@native('io.getInt')
+@native('std.io.getInt')
 fn getInt():void;
 
 export {

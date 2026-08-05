@@ -26,6 +26,8 @@ enum class TokenType {
     MY_BOOL,            //bool
     MY_ANY,             //any
     MY_LAMBDA,          //lambda 闭包类型标注
+    MY_BYTES,           //bytes
+    MY_U8,              //u8 bytes = u8[]
     MY_FOR,             //for
     MY_IN,              //in
     MY_WHILE,           //while

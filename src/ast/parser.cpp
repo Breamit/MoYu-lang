@@ -316,6 +316,57 @@ UPtr<TypeLiteral> Parser::parseTypeLiteral() {
     return typel;
 }
 
+UPtr<Expression> Parser::parseFunctionLiteral() {
+    // let x : lambda = fn(x:bytes):any{...};
+    // 当前是 fn
+    auto lit = std::make_unique<FunctionLiteral>();
+    lit->token = curToken_;
+
+    // 消耗 fn
+    nextToken();
+    // 消耗 (
+    nextToken();
+
+    // 解析函数列表
+    auto params = parseParamsList();
+    if(params == nullptr) {
+        return nullptr;
+    }
+
+    // 现在应该是 )
+
+    if(!curTokenIs(TokenType::MY_RPAREN)) {
+        ErrorInfo ei(curToken_);
+        ei.setMsg("lambda expression need end with )",ErrorType::ASTBUILD);
+        errors_.push_back(ei);
+        return nullptr;
+    }
+    nextToken();    // 消耗 )
+    
+    // 消耗 :
+    nextToken();
+
+    auto returnType = parseTypeLiteral();
+
+    if(returnType == nullptr) {
+        return nullptr;
+    }
+
+    // 现在应该是 {
+    auto stmt = parseBlockStatement();
+
+    if(stmt == nullptr) {
+        return nullptr;
+    }
+
+    // 组装
+    lit->params = std::move(*params);
+    lit->body = std::move(stmt);
+    lit->returnType = std::move(returnType);
+
+    return lit;
+}
+
 UPtr<Array<UPtr<Expression>>> Parser::parseListExpression(TokenType endToken) {
     auto list = std::make_unique<Array<UPtr<Expression>>>();
     if(curTokenIs(endToken)) {
@@ -539,7 +590,7 @@ UPtr<Array<Pair<UPtr<Expression>, UPtr<TypeLiteral>>>> Parser::parseParamsList()
 
 UPtr<LetStatement> Parser::parseLetStatement() {
     // 解析 let statement
-    // 标准的let语句： let <标识符> : <类型> = <表达式>
+    // 标准的let语句： let <标识符> (: <类型>) = <表达式>
     auto stmt = std::make_unique<LetStatement>();
     stmt->token = curToken_;    // 保存 let
     if(!expectPeek(TokenType::MY_IDENT)) {
@@ -555,19 +606,17 @@ UPtr<LetStatement> Parser::parseLetStatement() {
     // name就是ident
     stmt->name = std::move(ident);
 
-    // 下一个token 应该是 :
-    if(!expectPeek(TokenType::MY_COLON)) {
-        ErrorInfo ei(curToken_);
-        ei.setMsg("let need : type",ErrorType::ASTBUILD);
-        errors_.push_back(ei);
-        return nullptr;
+    nextToken();    // 消耗掉标识符
+    
+    // 当前token 如果是 :
+    if(curTokenIs(TokenType::MY_COLON)) {
+        // 消耗 :，前进到类型名起始token
+        nextToken();
+        stmt->varType = parseTypeLiteral();
     }
 
-    // 消耗 :，前进到类型名起始token
-    nextToken();
-    stmt->varType = parseTypeLiteral();
-
-    // 现在的token就是 =
+    // 不强制类型标注
+    // 当前的token就是 =
     if(!curTokenIs(TokenType::MY_ASSIGN)) {
         ErrorInfo ei(curToken_);
         ei.setMsg("let need = init value",ErrorType::ASTBUILD);
@@ -611,17 +660,14 @@ UPtr<ConstStatement> Parser::parseConstStatement() {
     // name就是ident
     stmt->name = std::move(ident);
 
-    // 下一个token 应该是 :
-    if(!expectPeek(TokenType::MY_COLON)) {
-        ErrorInfo ei(curToken_);
-        ei.setMsg("const need : type",ErrorType::ASTBUILD);
-        errors_.push_back(ei);
-        return nullptr;
+    nextToken();    // 消耗掉标识符
+    
+    // 当前token 如果是 :
+    if(curTokenIs(TokenType::MY_COLON)) {
+        // 消耗 :，前进到类型名起始token
+        nextToken();
+        stmt->varType = parseTypeLiteral();
     }
-
-    // 消耗 :，前进到类型名起始token
-    nextToken();
-    stmt->varType = parseTypeLiteral();
 
     // 现在的token就是 =
     if(!curTokenIs(TokenType::MY_ASSIGN)) {
@@ -1978,6 +2024,8 @@ Parser::PrefixFn Parser::prefixParseFn(TokenType type) {
             return [this]{return parseMapLiteral(); };
         case  TokenType::MY_AWAIT:
             return [this]{return parseAwaitExpression(); };
+        case TokenType::MY_FUNCTION:
+            return [this]{return parseFunctionLiteral(); };
         default:
             return nullptr;
     }

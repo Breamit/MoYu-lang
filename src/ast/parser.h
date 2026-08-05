@@ -105,6 +105,9 @@ public:
     // 解析类型标注字面量
     UPtr<TypeLiteral> parseTypeLiteral();
 
+    // 解析函数字面量
+    UPtr<Expression> parseFunctionLiteral();
+
     // 解析表达式列表
     UPtr<Array<UPtr<Expression>>> parseListExpression(TokenType endToken);
 

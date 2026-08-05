@@ -7,20 +7,20 @@
 #include <src/object/object.hpp>
 
 // print 
-
 SPtr<Object> ioPrint(const Array<SPtr<Object>> &args);
+
 // println
 SPtr<Object> ioPrintln(const Array<SPtr<Object>> &args);
+
 // getStr
 SPtr<Object> ioGetStr(const Array<SPtr<Object>> &args);
+
 // getLine
 SPtr<Object> ioGetLine(const Array<SPtr<Object>> &args);
+
 // getIntFloat
 SPtr<Object> ioGetFloat(const Array<SPtr<Object>> &args);
+
 // getInt
 SPtr<Object> ioGetInt(const Array<SPtr<Object>> &args);
-
-
-
 #endif
-

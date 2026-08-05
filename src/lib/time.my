@@ -1,11 +1,12 @@
 # 获取当前时间
-@native('time.now')
+@native('std.time.now')
 fn now():u64;
 
-# 睡眠
-@native('time.sleep')
-fn sleep(ms:u64):void;
+# 当前时间格式化成例如 2026-08-06T00:39:00
+@native('std.time.nowf')
+fn nowf():string;
 
-# 格式化获取当前时间
-@native('time.format')
-fn format():string;
+export {
+    now,
+    nowf,
+};
