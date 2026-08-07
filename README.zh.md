@@ -4,7 +4,7 @@
 
 一门编程语言及其解释器，由 **C++17** 编写，原生系统调用由 **Rust** 实现
 
-[![version](https://img.shields.io/badge/version-v0.1--beta-blue.svg)]()
+[![version](https://img.shields.io/badge/version-v1.0--beta-blue.svg)]()
 [![C++](https://img.shields.io/badge/C++-17-00599C.svg)]()
 [![Rust](https://img.shields.io/badge/Rust-1.80-000000.svg)]()
 [![license](https://img.shields.io/badge/license-MIT-green.svg)]()
