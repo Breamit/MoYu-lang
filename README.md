@@ -32,6 +32,8 @@ A programming language · Interpreter in **C++17**, native syscalls in **Rust**
 
 - **Coroutines / `await`** — the syntax is parsed, but `await` currently evaluates its argument synchronously (it does not suspend). Planned for a future version.
 
+- **Linux Platform** The current project has not yet been compiled and run on the Linux platform. Therefore, if there are any compilation issues on the Linux platform, please raise an issue immediately. I will resolve it as soon as possible.
+
 ## 📚 Documentation
 
 | topic | link |

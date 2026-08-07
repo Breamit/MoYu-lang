@@ -4,6 +4,7 @@
 /*.py
 /dylib/
 /my-language-extension/
+!/my-language-extension/my-language-extension-0.0.1.vsix
 /rust/*/target/
 /*.md
 !/README.md
