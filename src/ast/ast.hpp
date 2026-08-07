@@ -9,10 +9,10 @@
 enum class NodeType;
 
 // 接口
-interface Node;
-interface Expression;
-interface Statement;
-interface Annotation;
+interface Node;                     // AST结点统一接口
+interface Expression;               // 表达式接口
+interface Statement;                // 语句接口
+interface Annotation;               // 注解接口
 
 // 实现类
 // 程序相关
@@ -39,7 +39,6 @@ class IfStatement;                  // if 语句
 class SwitchStatement;              // switch 语句
 class FunctionDeclareStatement;     // 函数声明语句
 class StructDeclareStatement;       // 结构体声明语句
-class EnumDeclareStatement;         // 枚举声明语句
 class ImportStatement;              // 导包语句
 class ExportStatement;              // 导出语句
 class ReturnStatement;              // 返回语句
@@ -64,6 +63,16 @@ class PlatformAnnotation;           // 平台注解语句
 class NativeAnnotation;             // 原生注解语句
 class AsyncAnnotation;              // 异步注解
 class ObjectAnnotation;             // 对象注解
+
+// ====================================================================
+// TypeInfo：类型检查器的标注结果，挂在"类型不固定"的 AST 节点上
+// 纯解释时 eval 不读它，仅供 checker / optimizer / bytecode 使用
+// 默认情况下，数字字面量识别成 f64 和 i64 两种类型
+struct TypeInfo {
+    SPtr<TypeLiteral> type;          // 推导出或标注的类型，复用 TypeLiteral
+    bool sourceExplicit = false;     // 显式标注（true），推导（false）
+    bool checked = false;            // 是否检查过
+};
 
 
 
@@ -92,7 +101,6 @@ enum class NodeType {
     SWITCH_STATEMENT,
     FUNCTION_DECLARE_STATEMENT,
     STRUCT_DECLARE_STATEMENT,
-    ENUM_DECLARE_STATEMENT,
     IMPORT_STATEMENT,
     EXPORT_STATEMENT,
     RETURN_STATEMENT,
@@ -139,9 +147,9 @@ inline String escapeJson(const String& s) {
 interface Node {
 public:
     virtual ~Node() = default;
-    virtual NodeType type() const = 0;
-    virtual String tokenLiteral() const = 0;
-    virtual String toString() const = 0;
+    virtual NodeType type() const = 0;          // 获取节点类型，让switch直接判断，不需要类型转换就可以判断节点类型
+    virtual String tokenLiteral() const = 0;    // 获取token对应的标识，比如 let -> "let" , integer -> "123"
+    virtual String toString() const = 0;        // json格式化输出AST树结构的字符串
 };
 
 // 一个方法需要实现
@@ -164,7 +172,7 @@ public:
     virtual void annotationNode() = 0;
 };
 
-// 块语句 — 提前定义，供所有包含 BlockStatement 成员的类使用
+// 块语句
 class BlockStatement : impl Statement {
 public:
     Array<UPtr<Statement>> statements;
@@ -394,7 +402,7 @@ class TypeLiteral : impl Expression {
 public:
     Token token;
     String name;                           // 类型名字符串，如 "i32"、"string"、"list"、"Person"
-    Array<UPtr<TypeLiteral>> typeParams;   // 泛型参数，如 list<i32> → [i32]; map<string,i32> → [string,i32]
+    Array<UPtr<TypeLiteral>> typeParams;   // 泛型参数，如 list<i32> -> [i32]; map<string,i32> -> [string,i32]
     NodeType type() const {
         return NodeType::TYPE_LITERAL;
     }
@@ -493,6 +501,7 @@ public:
     UPtr<Identifier> name;  // 变量名
     UPtr<TypeLiteral> varType; // 类型标注
     UPtr<Expression> value; // 赋予的值
+    SPtr<TypeInfo> typeInfo; // 类型检查标注
     void statementNode()override {}
     NodeType type() const {
         return NodeType::LET_STATEMENT;
@@ -526,6 +535,7 @@ public:
     UPtr<Identifier> name;  // 变量名
     UPtr<TypeLiteral> varType; // 类型标注
     UPtr<Expression> value; // 赋予的值
+    SPtr<TypeInfo> typeInfo; // 类型检查标注
     void statementNode()override {}
     NodeType type() const {
         return NodeType::CONST_STATEMENT;
@@ -712,6 +722,7 @@ public:
     Array<Pair<UPtr<Expression>,UPtr<TypeLiteral>>> params; // 参数
     UPtr<TypeLiteral> returnType; // 返回类型
     UPtr<BlockStatement> body; // 函数体
+    SPtr<TypeInfo> typeInfo; // 类型检查标注
 
     void statementNode() override {}
     NodeType type() const {
@@ -792,46 +803,6 @@ public:
         return oss.str();
     }
     ~StructDeclareStatement() = default;
-};
-
-/**
- * enum Color {
- * white = 0,
- * black
- * };
- */
-class EnumDeclareStatement : impl Statement {
-public:
-    Token token;    // enum
-    UPtr<Identifier> name;  // 枚举名
-    // 内部是顺序标识符
-    Array<UPtr<Identifier>> values;
-    void statementNode() override {}
-    NodeType type() const {
-        return NodeType::ENUM_DECLARE_STATEMENT;
-    }
-    String tokenLiteral() const override {
-        return token.getLiteral();
-    }
-    String toString() const override {
-        std::ostringstream oss;
-        oss << "{\"type\":\"ENUM_DECLARE_STATEMENT\"";
-        oss << ",\"name\":";
-        if (name) oss << name->toString();
-        else oss << "null";
-        oss << ",\"values\":[";
-        for (size_t i = 0; i < values.size(); i++) {
-            if (i > 0) oss << ",";
-            oss << "{\"name\":";
-            if (values[i]) oss << values[i]->toString();
-            else oss << "null";
-            oss << "}";
-        }
-        oss << "]";
-        oss << "}";
-        return oss.str();
-    }
-    ~EnumDeclareStatement() = default;
 };
 
 // import
@@ -1002,6 +973,7 @@ public:
     String op;      // 运算符
     UPtr<Expression> left;
     UPtr<Expression> right;
+    SPtr<TypeInfo> typeInfo; // 类型检查标注
     void expressionNode() override {}
     NodeType type() const {
         return NodeType::INFIX_EXPRESSION;
@@ -1031,6 +1003,7 @@ public:
     Token token;    // 函数调用
     UPtr<Expression> func; // 函数名
     Array<UPtr<Expression>> arguments; // 参数
+    SPtr<TypeInfo> typeInfo; // 类型检查标注
     void expressionNode() override {}
     NodeType type() const {
         return NodeType::CALL_EXPRESSION;
@@ -1062,6 +1035,7 @@ public:
     Token token;    // 索引
     UPtr<Expression> left;
     UPtr<Expression> index;
+    SPtr<TypeInfo> typeInfo; // 类型检查标注
     void expressionNode() override {}
     NodeType type() const {
         return NodeType::INDEX_EXPRESSION;
@@ -1113,6 +1087,7 @@ public:
     Token token;                // .
     UPtr<Expression> object;
     UPtr<Expression> called;
+    SPtr<TypeInfo> typeInfo; // 类型检查标注
     void expressionNode() override {}
     NodeType type() const {
           return NodeType::MEMBER_ACCESS_EXPRESSION;
@@ -1282,6 +1257,8 @@ public:
     ~AsyncAnnotation() = default;
 };
 
+
+// unused 准备废弃
 // object
 class ObjectAnnotation : impl Annotation {
 public:

@@ -1,7 +1,3 @@
-// Copyright 2026 Breamit. All rights reserved.
-// 这个文件是声明解释器可以识别的
-// token的类型TokenType以及token对象 Token
-
 #ifndef __TOKEN_H__
 #define __TOKEN_H__
 
@@ -46,7 +42,6 @@ enum class TokenType {
     MY_STRUCT,          //struct
     MY_NULL,            //null
     MY_NONE,            // none
-    MY_ENUM,            //enum
     MY_NOT,             //not
     MY_AND,             //and
     MY_OR,              //or

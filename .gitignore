@@ -7,5 +7,6 @@
 /rust/*/target/
 /*.md
 !/README.md
+!/README.zh.md
 /src/test/
 /test/

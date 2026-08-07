@@ -28,7 +28,7 @@ fn time_to_string(m: fs::Metadata) -> Option<String> {
     Some(t.as_secs().to_string())
 }
 
-// 读文本文件：成功 → 内容，失败 → null
+// 读文本文件：成功 -> 内容，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn fs_read_text(path: *const c_char) -> *mut c_char {
     let Some(path) = (unsafe { cstr_to_str(path) }) else {
@@ -40,7 +40,7 @@ pub extern "C" fn fs_read_text(path: *const c_char) -> *mut c_char {
     }
 }
 
-// 写文本文件：成功 → 空串，失败 → null
+// 写文本文件：成功 -> 空串，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn fs_write_text(path: *const c_char, text: *const c_char) -> *mut c_char {
     let Some(path) = (unsafe { cstr_to_str(path) }) else {
@@ -55,7 +55,7 @@ pub extern "C" fn fs_write_text(path: *const c_char, text: *const c_char) -> *mu
     }
 }
 
-// 追加文本：成功 → 空串，失败 → null
+// 追加文本：成功 -> 空串，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn fs_append_text(path: *const c_char, text: *const c_char) -> *mut c_char {
     let Some(path) = (unsafe { cstr_to_str(path) }) else {
@@ -98,7 +98,7 @@ pub extern "C" fn fs_is_absolute(path: *const c_char) -> c_int {
     }
 }
 
-// 创建目录（递归）：成功 → 空串，失败 → null
+// 创建目录（递归）：成功 -> 空串，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn fs_mkdir(path: *const c_char) -> *mut c_char {
     let Some(path) = (unsafe { cstr_to_str(path) }) else {
@@ -110,7 +110,7 @@ pub extern "C" fn fs_mkdir(path: *const c_char) -> *mut c_char {
     }
 }
 
-// 删除目录：成功 → 空串，失败 → null
+// 删除目录：成功 -> 空串，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn fs_rmdir(path: *const c_char) -> *mut c_char {
     let Some(path) = (unsafe { cstr_to_str(path) }) else {
@@ -122,7 +122,7 @@ pub extern "C" fn fs_rmdir(path: *const c_char) -> *mut c_char {
     }
 }
 
-// 删除文件：成功 → 空串，失败 → null
+// 删除文件：成功 -> 空串，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn fs_remove(path: *const c_char) -> *mut c_char {
     let Some(path) = (unsafe { cstr_to_str(path) }) else {
@@ -134,7 +134,7 @@ pub extern "C" fn fs_remove(path: *const c_char) -> *mut c_char {
     }
 }
 
-// 创建时间：成功 → unix 秒字符串，失败 → null
+// 创建时间：成功 -> unix 秒字符串，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn fs_create_time_of(path: *const c_char) -> *mut c_char {
     let Some(path) = (unsafe { cstr_to_str(path) }) else {
@@ -149,7 +149,7 @@ pub extern "C" fn fs_create_time_of(path: *const c_char) -> *mut c_char {
     }
 }
 
-// 修改时间：成功 → unix 秒字符串，失败 → null
+// 修改时间：成功 -> unix 秒字符串，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn fs_modify_time_of(path: *const c_char) -> *mut c_char {
     let Some(path) = (unsafe { cstr_to_str(path) }) else {
@@ -164,7 +164,7 @@ pub extern "C" fn fs_modify_time_of(path: *const c_char) -> *mut c_char {
     }
 }
 
-// 绝对路径：成功 → 规范化绝对路径，失败 → null
+// 绝对路径：成功 -> 规范化绝对路径，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn fs_abspath_of(path: *const c_char) -> *mut c_char {
     let Some(path) = (unsafe { cstr_to_str(path) }) else {
@@ -188,7 +188,7 @@ pub extern "C" fn fs_size_of(path: *const c_char) -> u64 {
     }
 }
 
-// 列出目录下所有条目：返回 JSON 对象 {"名字":"file","名字2":"dir",...}，失败 → null
+// 列出目录下所有条目：返回 JSON 对象 {"名字":"file","名字2":"dir",...}，失败 -> null
 // 键做 JSON 转义（文件名可能含引号/反斜杠），C++ 侧用项目 JSON 解析器还原
 fn json_escape(s: &str) -> String {
     let mut out = String::new();

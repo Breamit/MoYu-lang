@@ -6,6 +6,7 @@
 #include <src/object/object.hpp>
 #include <sstream>
 
+// 栈作用域，Environment 是用来存储运行时的变量的
 class Environment {
 private:
     SPtr<Environment> outer_;
@@ -24,6 +25,7 @@ public:
             return it->second;
         }
         if(outer_ != nullptr) {
+            // 该层没找到就向上查找
             return outer_->get(key);
         }
         std::stringstream ss;
@@ -32,10 +34,11 @@ public:
     }
 };
 
+// 类型注册，和变量隔离开
 class TypeEnvironment {
 private:
-    Map<String,SPtr<Object>> store_;                       // 类型名 → 类型定义对象
-    Map<String,Map<String,SPtr<Object>>> methods_;         // 类型名 → (方法名 → 方法对象)
+    Map<String,SPtr<Object>> store_;                       // 类型名 -> 类型定义对象
+    Map<String,Map<String,SPtr<Object>>> methods_;         // 类型名 -> (方法名 -> 方法对象)
 public:
     // 注册类型定义
     void set(const String& key, SPtr<Object> value) {

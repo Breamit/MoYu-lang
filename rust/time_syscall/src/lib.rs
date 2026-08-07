@@ -20,7 +20,7 @@ pub extern "C" fn time_now() -> u64 {
         .unwrap_or(0)
 }
 
-// unix 秒 → UTC 日历日期（Howard Hinnant 的 civil_from_days 算法）
+// unix 秒 -> UTC 日历日期（Howard Hinnant 的 civil_from_days 算法）
 fn civil_from_days(z: i64) -> (i64, i64, i64) {
     let z = z + 719468;
     let era = z.div_euclid(146097);
@@ -47,7 +47,7 @@ fn format_now() -> String {
     format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}", y, m, d, hh, mm, ss)
 }
 
-// 当前时间格式化字符串，失败 → null
+// 当前时间格式化字符串，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn time_nowf() -> *mut c_char {
     to_cstring(&format_now())

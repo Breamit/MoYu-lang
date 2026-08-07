@@ -1,0 +1,4 @@
+import io;
+let s : string = "hello";
+io.println(s);
+io.println(s.size());

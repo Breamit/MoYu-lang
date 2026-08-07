@@ -2,8 +2,8 @@
 #include <limits>
 #include <src/utils/json/json.h>
 
-// Rust 侧导出（rust/fs_syscall/src/lib.rs），staticlib 静态链接进可执行文件
-// char* 型：成功 → 结果（空串也算成功），失败 → null；C++ 用完必须 fs_free
+// Rust 侧导出，staticlib 静态链接进可执行文件
+// char* 型：成功 -> 结果，失败 -> null；C++ 用完必须 fs_free
 // c_int 型：1 / 0
 extern "C" {
     char* fs_read_text(const char* path);
@@ -18,8 +18,8 @@ extern "C" {
     char* fs_create_time_of(const char* path);
     char* fs_modify_time_of(const char* path);
     char* fs_abspath_of(const char* path);
-    u64   fs_size_of(const char* path);        // 失败返回 u64::MAX
-    char* fs_list_dir(const char* path);       // "名字\t类型\n..." 失败返回 null
+    u64   fs_size_of(const char* path);        
+    char* fs_list_dir(const char* path);       
     void  fs_free(char* ptr);
 }
 
@@ -35,7 +35,7 @@ namespace {
     // 通用错误消息前缀
     String errPrefix(const String& fname) { return fname + ": failed"; }
 
-    // 调 Rust char* 型函数：null → ErrorObject，否则 StringObject（并释放）
+    // 调 Rust char* 型函数：null -> ErrorObject，否则 StringObject
     SPtr<Object> callChar(char* (*fn)(const char*), const String& path, const String& fname) {
         char* res = fn(path.c_str());
         if(res == nullptr) {

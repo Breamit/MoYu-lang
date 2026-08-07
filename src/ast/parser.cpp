@@ -106,12 +106,11 @@ UPtr<Program> Parser::parseProgramWithoutTopLevelStatements() {
         if(stmt != nullptr) {
             NodeType tp = stmt->type();
             switch(tp) {
-                // 只允许注解语句、函数声明、结构体声明、枚举声明、let 、 const语句
+                // 只允许注解语句、函数声明、结构体声明、let 、 const语句
                 // import , export
                 case NodeType::ANNOTATION_STATEMENT:
                 case NodeType::FUNCTION_DECLARE_STATEMENT:
                 case NodeType::STRUCT_DECLARE_STATEMENT:
-                case NodeType::ENUM_DECLARE_STATEMENT:
                 case NodeType::LET_STATEMENT:
                 case NodeType::CONST_STATEMENT:
                 case NodeType::IMPORT_STATEMENT:
@@ -166,9 +165,6 @@ UPtr<Statement> Parser::parseStatement() {
         case TokenType::MY_STRUCT:
             // 解析结构体声明
             return parseStructDeclareStatement();
-        case TokenType::MY_ENUM:
-            // 枚举声明
-            return parseEnumDeclareStatement();
         case TokenType::MY_IMPORT:
             // 解析导入语句声明
             return parseImportStatement();
@@ -1533,57 +1529,6 @@ UPtr<StructDeclareStatement> Parser::parseStructDeclareStatement() {
     return decl;
 }
 
-UPtr<EnumDeclareStatement> Parser::parseEnumDeclareStatement() {
-    auto decl = std::make_unique<EnumDeclareStatement>();
-    decl->token = curToken_;
-    nextToken();
-    if(!curTokenIs(TokenType::MY_IDENT)) {
-        ErrorInfo ei(curToken_);
-        ei.setMsg("enum need name",ErrorType::ASTBUILD);
-        errors_.push_back(ei);
-        return nullptr;
-    }
-    auto nameIdent = std::make_unique<Identifier>();
-    nameIdent->token = curToken_;
-    nameIdent->value = curToken_.getLiteral();
-    decl->name = std::move(nameIdent);
-    nextToken();
-    if(!curTokenIs(TokenType::MY_LBRACE)) {
-        ErrorInfo ei(curToken_);
-        ei.setMsg("enum need { values }",ErrorType::ASTBUILD);
-        errors_.push_back(ei);
-        return nullptr;
-    }
-    nextToken();
-    while(curTokenIs(TokenType::MY_IDENT)) {
-        auto ident = std::make_unique<Identifier>();
-        ident->token = curToken_;
-        ident->value = curToken_.getLiteral();
-        decl->values.push_back(std::move(ident));
-        nextToken();
-        if(curTokenIs(TokenType::MY_COMMA)) {
-            nextToken();
-        } else {
-            break;
-        }
-    }
-    if(!curTokenIs(TokenType::MY_RBRACE)) {
-        ErrorInfo ei(curToken_);
-        ei.setMsg("enum need end with }",ErrorType::ASTBUILD);
-        errors_.push_back(ei);
-        return nullptr;
-    }
-    nextToken();
-    if(!curTokenIs(TokenType::MY_SEMICOLON)) {
-        ErrorInfo ei(curToken_);
-        ei.setMsg("enum need end with ;",ErrorType::ASTBUILD);
-        errors_.push_back(ei);
-        return nullptr;
-    }
-    nextToken();
-    return decl;
-}
-
 UPtr<ImportStatement> Parser::parseImportStatement() {
     auto stmt = std::make_unique<ImportStatement>();
     stmt->token = curToken_;
@@ -1988,7 +1933,7 @@ UPtr<MemberAccessExpression> Parser::parseMemberAccessExpression(UPtr<Expression
       }
       auto name = parseIdentifier();      // 只解析 w，不再 parseExpression
 
-      // 如果后面是 ( → 方法调用 p.getName()
+      // 如果后面是 ( -> 方法调用 p.getName()
       if(curTokenIs(TokenType::MY_LPAREN)) {
           auto call = parseCallExpression(std::move(name));
           expr->called = std::move(call);  // called = CallExpression(getName)

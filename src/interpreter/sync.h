@@ -129,7 +129,7 @@ private:
     void collectExports(const Program* program , SPtr<Environment> env, SPtr<ModuleObject> mod);
 
     // 执行中间件
-    void executeMiddleware(const Program* program);
+    void executeMiddleware(Program* program);
 };
 
 #endif

@@ -14,7 +14,7 @@ int main(i32 argc, char *argv[]) {
     std::cout.tie(nullptr);
 
     // 项目根（标准库 src/lib 的基准）：优先用 exe 所在目录的父目录
-    // （build/moyu.exe → 项目根），这样从任意目录启动都能找到标准库
+    // （build/moyu.exe -> 项目根），这样从任意目录启动都能找到标准库
     // exe 被单独拷走（无 src/lib）时 fallback 到当前 cwd
     auto projRoot = fs::absolute(fs::path(argv[0]).parent_path()).parent_path();
     if(!fs::exists(projRoot / "src" / "lib")) {
@@ -22,7 +22,7 @@ int main(i32 argc, char *argv[]) {
     }
 
     if(argc == 1) {
-        // 无参数 → 进入交互式 REPL
+        // 无参数 -> 进入交互式 REPL
         return syncReplMain(projRoot.string());
     } else if(argc == 2) {
         String p1 = argv[1];

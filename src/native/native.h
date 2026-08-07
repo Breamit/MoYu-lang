@@ -8,7 +8,7 @@
 
 // 全局 native 方法注册表
 // native 方法通过 path 映射到函数包装：path -> std::function
-// 例：@native('vm.file.ino')  →  path = "vm.file.ino"
+// 例：@native('vm.file.ino')  ->  path = "vm.file.ino"
 //     调用时通过 path 查表，拿到函数执行
 //
 // 表是全局的，放 native 文件夹下，供 runtime 调用

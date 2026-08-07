@@ -1,7 +1,7 @@
 #include "lib_os.h"
 
 // Rust 侧导出（rust/os_syscall/src/lib.rs），staticlib 静态链接进可执行文件
-// char* 型：成功 → 结果（空串也算成功），失败 → null；C++ 用完必须 os_free
+// char* 型：成功 -> 结果（空串也算成功），失败 -> null；C++ 用完必须 os_free
 // u64 / c_int 型：直接返回值
 extern "C" {
     char* os_pwd();
@@ -16,7 +16,7 @@ extern "C" {
 }
 
 namespace {
-    // 调 Rust char* 型函数：null → ErrorObject，否则 StringObject（并释放）
+    // 调 Rust char* 型函数：null -> ErrorObject，否则 StringObject（并释放）
     SPtr<Object> osCallChar(char* (*fn)(), const String& fname) {
         char* res = fn();
         if(res == nullptr) {
@@ -87,6 +87,8 @@ SPtr<Object> osSleep(const Array<SPtr<Object>> &args)
     if(args.size() >= 1) {
         switch(args[0]->type()) {
             case ObjectType::I32: ms = static_cast<I32Object*>(args[0].get())->value; break;
+            case ObjectType::I64: ms = static_cast<I64Object*>(args[0].get())->value; break;
+            case ObjectType::U32: ms = static_cast<U32Object*>(args[0].get())->value; break;
             case ObjectType::U64: ms = static_cast<U64Object*>(args[0].get())->value; break;
             default: break;
         }

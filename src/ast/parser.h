@@ -168,9 +168,6 @@ public:
     // 解析结构体声明
     UPtr<StructDeclareStatement> parseStructDeclareStatement();
 
-    // 解析枚举声明
-    UPtr<EnumDeclareStatement> parseEnumDeclareStatement();
-
     // 解析 import 语句
     UPtr<ImportStatement> parseImportStatement();
 

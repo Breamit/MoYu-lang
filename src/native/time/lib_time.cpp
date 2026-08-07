@@ -3,7 +3,7 @@
 // Rust 侧导出（rust/time_syscall/src/lib.rs），staticlib 静态链接进可执行文件
 extern "C" {
     u64   time_now();
-    char* time_nowf();   // 成功 → 格式化时间，失败 → null；用完 time_free
+    char* time_nowf();   // 成功 -> 格式化时间，失败 -> null；用完 time_free
     void  time_free(char* ptr);
 }
 

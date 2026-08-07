@@ -92,7 +92,6 @@ TokenType Token::lookUpIdent(const Token& tk) {
             {"struct", TokenType::MY_STRUCT},
             {"null", TokenType::MY_NULL},
             {"none",TokenType::MY_NONE},
-            {"enum", TokenType::MY_ENUM},
             {"not", TokenType::MY_NOT},
             {"and", TokenType::MY_AND},
             {"or", TokenType::MY_OR},

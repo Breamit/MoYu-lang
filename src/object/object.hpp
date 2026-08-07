@@ -445,7 +445,7 @@ public:
 class StructObject : impl Object {
 public:
     String structName;                          // 指向类型定义的名字（typeEnv 查表用）
-    Array<Pair<String, SPtr<Object>>> fields;   // 字段名 → 字段值
+    Array<Pair<String, SPtr<Object>>> fields;   // 字段名 -> 字段值
     ObjectType type() const {
         return ObjectType::STRUCT;
     }
@@ -506,8 +506,8 @@ public:
 class StructDeclObject : impl Object {
 public:
     String structName;                              // 类型名
-    Array<Pair<String, String>> fieldsDecl;         // 字段名 → 字段类型名（类型检查交给中间件）
-    Map<String, SPtr<FunctionObject>> methods;      // 方法名 → 方法（@method 注入）
+    Array<Pair<String, String>> fieldsDecl;         // 字段名 -> 字段类型名（类型检查交给中间件）
+    Map<String, SPtr<FunctionObject>> methods;      // 方法名 -> 方法（@method 注入）
     ObjectType type() const {
         return ObjectType::STRUCT_DECL;
     }

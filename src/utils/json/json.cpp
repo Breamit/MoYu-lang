@@ -288,7 +288,7 @@ String JSON::stringify(SPtr<Object> obj) {
             for(const auto& [k, v] : mp) {
                 if(!first) out += ",";
                 first = false;
-                // 键必须是字符串 → 带引号
+                // 键必须是字符串 -> 带引号
                 out += "\"" + k->inspect() + "\":";
                 out += stringify(v);
             }

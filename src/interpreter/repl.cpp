@@ -4,7 +4,7 @@
 #include <string>
 
 // 同步 REPL 主循环
-// 流程：读一行 → SyncRuntime.run 求值 → 打印结果 → 继续
+// 流程：读一行 -> SyncRuntime.run 求值 -> 打印结果 -> 继续
 // 环境跨行保持：整个 REPL 共享一个 SyncRuntime 实例，globalEnv 累积
 int syncReplMain(const String& projectRoot) {
     SyncRuntime rt(projectRoot);   // 只建一次，globalEnv 跨行累积

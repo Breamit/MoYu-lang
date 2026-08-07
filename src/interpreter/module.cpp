@@ -54,6 +54,7 @@ SPtr<Object> ModuleLoader::loadModule(const String &moduleName)
 
 SPtr<ModuleObject> ModuleLoader::loadModuleImpl(const String &moduleName) {
     String path;
+    // TODO 后续工程项目化添加config.json，去对应的字段找
     auto pit = pathMap_.find(moduleName);
 
     if(pit != pathMap_.end()) {
@@ -62,7 +63,7 @@ SPtr<ModuleObject> ModuleLoader::loadModuleImpl(const String &moduleName) {
         path = "src/lib/" + moduleName + ".my";
     }
 
-    // 相对路径 → 以项目根（baseDir_）为基准；baseDir_ 为空（REPL）则用当前 cwd
+    // 相对路径 -> 以项目根为基准；baseDir_ 为空则用当前 cwd
     if(!baseDir_.empty()) {
         std::filesystem::path p(path);
         if(!p.is_absolute()) {

@@ -7,6 +7,9 @@
 #include <filesystem>
 #include <sstream>
 #include <src/builtin/builtin.hpp>
+#include <src/builtin/container_builtin.h>
+#include <src/sementic/checker/typechecker.h>
+#include <src/sementic/platform/platform_filter.h>
 
 SyncRuntime::SyncRuntime(const String& projectRoot) : moduleLoader_(projectRoot) {
     globalEnv = std::make_shared<Environment>();
@@ -16,7 +19,7 @@ SyncRuntime::SyncRuntime(const String& projectRoot) : moduleLoader_(projectRoot)
     
     exitCode = 0;
     // 装载全局程序
-    // 模块文件加载回调：读文件 → parse → eval → 收集 export
+    // 模块文件加载回调：读文件 -> parse -> eval -> 收集 export
     moduleLoader_.setFileLoader([this](const String& path, const String& name) -> SPtr<ModuleObject> {
         auto res = loadModuleFile(path, name);
         // loadModuleFile 返回 Object；出错或非模块返回 nullptr
@@ -250,6 +253,7 @@ SPtr<Object> SyncRuntime::evalInteger(const IntegerLiteral *node) {
     // 现在的node是整数字面量
     i64 value;
 
+    // 函数内解决异常，不向外抛出
     try {
         value = std::stoll(node->value);
     } catch(const std::invalid_argument& err ) {
@@ -276,8 +280,6 @@ SPtr<Object> SyncRuntime::evalFloating(const FloatLiteral *node) {
 }
 
 SPtr<Object> SyncRuntime::evalString(const StringLiteral *node) {
-    // 处理转义字符 TODO
-
     return std::make_shared<StringObject>(node->value);
 }
 
@@ -400,7 +402,7 @@ SPtr<Object> SyncRuntime::evalAssign(const InfixExpression *node, SPtr<Environme
       // 2. 按左操作数节点类型分发写回
       auto leftNode = node->left.get();
       switch(leftNode->type()) {
-          // x = 10 → 变量已在环境里：保持原地改值（写透外层作用域）
+          // x = 10 -> 变量已在环境里：保持原地改值（写透外层作用域）
           case NodeType::IDENTIFIER: {
               auto name = static_cast<const Identifier*>(leftNode)->value;
               auto cur = env->get(name);
@@ -410,7 +412,7 @@ SPtr<Object> SyncRuntime::evalAssign(const InfixExpression *node, SPtr<Environme
               return objectAssign(cur, right);
           }
 
-          // p.y = 12 → 写回 struct 实例的字段
+          // p.y = 12 -> 写回 struct 实例的字段
           case NodeType::MEMBER_ACCESS_EXPRESSION: {
               auto mem = static_cast<const MemberAccessExpression*>(leftNode);
               // 求值 object 部分（p）
@@ -426,7 +428,7 @@ SPtr<Object> SyncRuntime::evalAssign(const InfixExpression *node, SPtr<Environme
               }
               auto inst = static_cast<StructObject*>(obj.get());
               String fieldName = static_cast<const Identifier*>(mem->called.get())->value;
-              // 字段已存在 → 替换值；不存在 → 追加（容忍构造时缺省的字段）
+              // 字段已存在 -> 替换值；不存在 -> 追加（容忍构造时缺省的字段）
               for(auto& [name, val] : inst->fields) {
                   if(name == fieldName) {
                       val = right;
@@ -437,7 +439,7 @@ SPtr<Object> SyncRuntime::evalAssign(const InfixExpression *node, SPtr<Environme
               return right;
           }
 
-          // list[i] = v / map[k] = v → 写回容器（顺带修好 list/map 赋值）
+          // list[i] = v / map[k] = v -> 写回容器（顺带修好 list/map 赋值）
           case NodeType::INDEX_EXPRESSION: {
               auto idx = static_cast<const IndexExpression*>(leftNode);
               auto container = eval(idx->left.get(), env);
@@ -771,7 +773,7 @@ SPtr<Object> SyncRuntime::evalCallExpression(const CallExpression *node, SPtr<En
         case ObjectType::CONSTRUCTOR: {
             // 结构体构造器：Person({"x":10,"y":10})
             auto ctor = static_cast<ConstructorObject*>(callee.get());
-            // 调转换回调：map → 实例
+            // 调转换回调：map -> 实例
             return ctor->func(args);
         }
         case ObjectType::NATIVE: {
@@ -876,11 +878,11 @@ SPtr<Object> SyncRuntime::evalIndexExpression(const IndexExpression *node, SPtr<
 }
 
 SPtr<Object> SyncRuntime::evalStructDeclareStatement(const StructDeclareStatement *node, SPtr<Environment> env) {
-    // ========== 1. 构造类型定义对象 ==========
+    //1. 构造类型定义对象
     auto def = std::make_shared<StructDeclObject>();
     def->structName = node->name->value;
 
-    // 字段名 → 字段类型名，拷贝进类型定义
+    // 字段名 -> 字段类型名，拷贝进类型定义
     for(const auto& [name, type] : node->fields) {
         if(name) {
             auto ident = static_cast<const Identifier*>(name.get());
@@ -891,8 +893,8 @@ SPtr<Object> SyncRuntime::evalStructDeclareStatement(const StructDeclareStatemen
     // 注册类型定义到类型环境
     typeEnv.set(def->structName, def);
 
-    // ========== 2. 注册构造器到变量环境 ==========
-    // 构造器持有转换回调：捕获类型定义，接收 map 参数 → 建实例
+    //2. 注册构造器到变量环境
+    // 构造器持有转换回调：捕获类型定义，接收 map 参数 -> 建实例
     auto ctor = std::make_shared<ConstructorObject>(
         [def](const Array<SPtr<Object>>& args) -> SPtr<Object> {
             // 参数检查：必须一个 map 字面量
@@ -913,13 +915,13 @@ SPtr<Object> SyncRuntime::evalStructDeclareStatement(const StructDeclareStatemen
                         break;
                     }
                 }
-                // 字段缺省 → 全局 Nil 单例
+                // 字段缺省 -> 全局 Nil 单例
                 inst->fields.push_back({fieldName, value ? value : Null});
             }
             return inst;
         }
     );
-    // 记录类型名，便于 inspect / 调试
+    // 记录类型名，便于 inspect
     ctor->name = def->structName;
     env->set(def->structName, ctor);
 
@@ -933,7 +935,7 @@ SPtr<Object> SyncRuntime::evalMemberAccessExpression(const MemberAccessExpressio
         return obj;
     }
 
-    // 2. called 是 CallExpression → 方法调用 p.getName(...)
+    // 2. called 是 CallExpression -> 方法调用 p.getName(...)
     if(node->called->type() == NodeType::CALL_EXPRESSION) {
         auto call = static_cast<const CallExpression*>(node->called.get());
         // 方法名是 call->func（Identifier）
@@ -962,7 +964,7 @@ SPtr<Object> SyncRuntime::evalMemberAccessExpression(const MemberAccessExpressio
                 args.push_back(argVal);
             }
 
-            // 成员是可调用对象（NativeObject/FunctionObject）→ 走 evalCallExpression
+            // 成员是可调用对象（NativeObject/FunctionObject）-> 走 evalCallExpression
             if(member->type() == ObjectType::NATIVE ||
                member->type() == ObjectType::FUNCTION ) {
                 // 构造一个临时 CallExpression 不方便，直接按类型分发
@@ -994,6 +996,23 @@ SPtr<Object> SyncRuntime::evalMemberAccessExpression(const MemberAccessExpressio
                 }
             }
             return std::make_shared<ErrorObject>("module member is not callable");
+        }
+
+        // 内置类型方法：list / string / map
+        // 只负责组装 (receiver, methodName, args)，逻辑交给 container_builtin
+        if(obj->type() == ObjectType::LIST ||
+           obj->type() == ObjectType::STRING ||
+           obj->type() == ObjectType::MAP) {
+            // 求值显式参数
+            Array<SPtr<Object>> args;
+            for(const auto& argNode : call->arguments) {
+                auto argVal = eval(argNode.get(), env);
+                if(argVal != nullptr && argVal->type() == ObjectType::ERROR) {
+                    return argVal;
+                }
+                args.push_back(argVal);
+            }
+            return callContainerMethod(obj, methodName, args);
         }
 
         // 只支持 struct 实例的方法调用
@@ -1080,7 +1099,7 @@ SPtr<Object> SyncRuntime::evalMemberAccessExpression(const MemberAccessExpressio
         return res;
     }
 
-    // 3. called 是 Identifier → 字段访问 p.age
+    // 3. called 是 Identifier -> 字段访问 p.age
     if(node->called->type() == NodeType::IDENTIFIER) {
         auto fieldName = static_cast<const Identifier*>(node->called.get())->value;
 
@@ -1131,7 +1150,7 @@ SPtr<Object> SyncRuntime::evalImportStatement(const ImportStatement *node, SPtr<
 
 SPtr<Object> SyncRuntime::evalExportStatement(const ExportStatement *node, SPtr<Environment> env) {
     // export 现阶段无用：导出由模块系统处理，eval 层面不执行任何动作
-    // 将来：模块加载器收集导出的名字
+    // 将来模块加载器收集导出的名字
     (void)node;
     (void)env;
     return Null;
@@ -1170,7 +1189,7 @@ SPtr<Object> SyncRuntime::evalAnnotationStatement(const AnnotationStatement *nod
                 methodStruct = method->annoType->value;
                 break;
             }
-            // @async —— 标记异步（V2.0 并发调度用）
+            // @async —— 标记异步（TODO：下一个版本开发了单线程并发模型的eval之后，就可以使用了，届时会更新lib，现在不给予真实的线程对象，防止未释放或者意外回收）
             case NodeType::ASYNC_ANNOTATION:
                 isAsync = true;
                 break;
@@ -1268,6 +1287,15 @@ void SyncRuntime::collectExports(const Program *program, SPtr<Environment> env, 
     }
 }
 
-void SyncRuntime::executeMiddleware(const Program *program) {
-    pass
+void SyncRuntime::executeMiddleware(Program *program) {
+    if(program != nullptr) {
+        // 1. 平台过滤：先删不匹配当前 OS 的 @platform 注解节点
+        PlatformFilter::filter(program);
+        // 2. 类型检查
+        TypeChecker checker;
+        auto errors = checker.check(program);
+        for(const auto& err : errors) {
+            err.println(std::cerr);
+        }
+    }
 }

@@ -69,7 +69,6 @@ static String tokenTypeName(TokenType type) {
         case TokenType::MY_STRUCT:         return "STRUCT";
         case TokenType::MY_NULL:           return "NULL";
         case TokenType::MY_NONE:           return "NONE";
-        case TokenType::MY_ENUM:           return "ENUM";
         case TokenType::MY_NOT:            return "NOT";
         case TokenType::MY_AND:            return "AND";
         case TokenType::MY_OR:             return "OR";

@@ -20,7 +20,7 @@ unsafe fn cstr_to_str<'a>(p: *const c_char) -> Option<&'a str> {
     unsafe { CStr::from_ptr(p).to_str().ok() }
 }
 
-// 获取当前工作目录：成功 → 路径，失败 → null
+// 获取当前工作目录：成功 -> 路径，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn os_pwd() -> *mut c_char {
     match env::current_dir() {
@@ -29,7 +29,7 @@ pub extern "C" fn os_pwd() -> *mut c_char {
     }
 }
 
-// 获取环境变量：成功 → 值，未设置 → 空串，失败 → null
+// 获取环境变量：成功 -> 值，未设置 -> 空串，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn os_get_env(key: *const c_char) -> *mut c_char {
     let Some(key) = (unsafe { cstr_to_str(key) }) else {
@@ -41,7 +41,7 @@ pub extern "C" fn os_get_env(key: *const c_char) -> *mut c_char {
     }
 }
 
-// 设置环境变量：成功 → 空串，失败 → null
+// 设置环境变量：成功 -> 空串，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn os_set_env(key: *const c_char, value: *const c_char) -> *mut c_char {
     let Some(key) = (unsafe { cstr_to_str(key) }) else {
@@ -86,7 +86,7 @@ pub extern "C" fn os_exec(cmd: *const c_char) -> c_int {
     }
 }
 
-// 获取操作系统类型：成功 → "WINDOWS"/"LINUX"/"UNKNOWN"，失败 → null
+// 获取操作系统类型：成功 -> "WINDOWS"/"LINUX"/"UNKNOWN"，失败 -> null
 #[unsafe(no_mangle)]
 pub extern "C" fn os_get_os() -> *mut c_char {
     #[cfg(target_os = "windows")]
