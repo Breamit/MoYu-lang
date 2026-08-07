@@ -13,7 +13,7 @@
 
 ---
 
-[看不懂英文？]()
+[don't understand Chinese?](README.md)
 
 ## ✨ 特性
 
@@ -32,8 +32,8 @@
 
 | 主题 | 链接 |
 |---|---|
-| 语言语法与句法 | [grammar](docs/grammar/v0.1.md) |
-| 构建、运行与限制 | [build](docs/build/build.md) |
+| 语言语法与句法 | [grammar](docs/grammar/v1.0.zh.md.md) |
+| 构建、运行与限制 | [build](docs/build/build.zh.md.md) |
 
 快速示例：
 

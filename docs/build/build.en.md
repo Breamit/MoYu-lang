@@ -229,6 +229,7 @@ Integration tests live in `test/`:
 
 ## 9. Known limitations (beta)
 
+- **Coroutines / `await`** are not yet implemented — the syntax is parsed but `await` evaluates synchronously (no suspension). Planned for a future version.
 - **Type checker errors** are reported without line/column positions yet.
 - **Custom modules** (user `import` of non-builtin `.my` files) load and run, but their exported types are not yet type-checked.
 - **`@platform`** filtering happens at compile time — code for other platforms is removed before type checking, which is intentional.

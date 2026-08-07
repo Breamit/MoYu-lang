@@ -13,7 +13,7 @@ A programming language · Interpreter in **C++17**, native syscalls in **Rust**
 
 ---
 
-[don't understand English?]()
+[看不懂英文？](./README.zh.md)
 
 ## ✨ Features
 
@@ -28,11 +28,16 @@ A programming language · Interpreter in **C++17**, native syscalls in **Rust**
 - 🦀 **Rust syscalls** — fs/io/os/time through a C ABI bridge, statically linked
 - 💬 **REPL** — interactive shell built in
 
+## ⏳ Not yet implemented (v1.0)
+
+- **Coroutines / `await`** — the syntax is parsed, but `await` currently evaluates its argument synchronously (it does not suspend). Planned for a future version.
+
 ## 📚 Documentation
 
 | topic | link |
 |---|---|
-| Language grammar & syntax | [grammar](docs/grammar/v0.1.md) |
+| Language grammar & syntax (EN) | [v1.0.en.md](docs/grammar/v1.0.en.md) |
+| Language grammar & syntax (ZH) | [v1.0-zh.md](docs/grammar/v1.0-zh.md) |
 | Build, run & limitations (EN) | [build.en.md](docs/build/build.en.md) |
 | Build, run & limitations (ZH) | [build.zh.md](docs/build/build.zh.md) |
 
