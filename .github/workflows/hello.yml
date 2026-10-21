@@ -1,0 +1,31 @@
+name: Hello Actions
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:        # 允许在 Actions 页面手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Print info
+        run: |
+          echo "Hello, GitHub Actions!"
+          echo "Repository: ${{ github.repository }}"
+          echo "Triggered by: ${{ github.event_name }}"
+          echo "Commit: ${{ github.sha }}"
+
+      - name: Create artifact
+        run: |
+          mkdir -p output
+          echo "built at $(date -u)" > output/build-info.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-info
+          path: output/
