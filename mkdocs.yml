@@ -1,0 +1,14 @@
+site_name: MoYu解释器
+site_url: https://breamit.github.io/MoYu-lang/
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.top
+    - content.code.copy
+nav:
+  - 首页: index.md
+  - 关于: about.md
+markdown_extensions:
+  - admonition
+  - pymdownx.superfences
